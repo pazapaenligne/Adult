@@ -14,7 +14,14 @@
 
   PRODUCTION NOTES
   ----------------
-  1. AUDIO. All clips are loaded from the folder "audio/" next to this file.
+  1. AUDIO. Every button first looks for a recorded mp3 in the folder
+     "audio/" next to this file. If the file is not there, the activity
+     speaks the line itself using the device voice, forced to British
+     English (en-GB), a female voice where the device offers one, and a
+     rate of 0.82 so A1 learners can follow it. Drop the studio
+     recordings into "audio/" and they silently take over.
+     The words for every clip are on each button in data-say, so this
+     file is also the recording script.
      Change AUDIO_BASE in the script at the bottom if your Moodle file area
      uses a different path. If a file is missing, its button switches to a
      quiet "Audio coming soon" state and the written text stays visible, so
@@ -59,29 +66,65 @@
 -->
 
 <style>
-  /* ---------- tokens ---------- */
+  /* ---------------------------------------------------------
+     PAZAPA BRAND GUIDELINES 2017-2018 EDITION
+     Colours  : #36BBD6 blue · #C9D646 green · #FCC104 yellow
+                #E6352B red · #EBEBEB light grey · #2E2E2D dark grey
+     Headings : Filson Soft Black — never in all capitals
+     Body     : Open Sans
+     Fonts are self-hosted from the "fonts/" folder next to this file.
+     Filson Soft is a licensed typeface: drop the woff2/woff the
+     designer supplies into that folder. Until it is there the page
+     falls back to the nearest available geometric sans.
+  --------------------------------------------------------- */
+  @font-face{
+    font-family:"Filson Soft";
+    src:url("fonts/FilsonSoftBlack.woff2") format("woff2"),
+        url("fonts/FilsonSoftBlack.woff") format("woff");
+    font-weight:900;font-style:normal;font-display:swap;
+  }
+  @font-face{
+    font-family:"Open Sans";
+    src:url("fonts/OpenSans-Regular.woff2") format("woff2");
+    font-weight:400;font-style:normal;font-display:swap;
+  }
+  @font-face{
+    font-family:"Open Sans";
+    src:url("fonts/OpenSans-SemiBold.woff2") format("woff2");
+    font-weight:600;font-style:normal;font-display:swap;
+  }
+  @font-face{
+    font-family:"Open Sans";
+    src:url("fonts/OpenSans-Bold.woff2") format("woff2");
+    font-weight:700;font-style:normal;font-display:swap;
+  }
+
   :root{
-    --navy:#12395C;
-    --navy-deep:#0B2740;
-    --teal:#14776B;
-    --teal-ink:#0F5A51;
-    --teal-soft:#E3F1EE;
-    --gold:#C07C0C;
-    --gold-ink:#8A5606;
-    --gold-soft:#FBF1DA;
-    --ink:#1E2A33;
-    --muted:#57697A;
-    --line:#DCE4EA;
-    --bg:#F6F8FA;
-    --card:#FFFFFF;
+    /* brand colours, exactly as published */
+    --blue:#36BBD6;
+    --green:#C9D646;
+    --yellow:#FCC104;
+    --red:#E6352B;
+    --grey:#EBEBEB;
+    --ink:#2E2E2D;
 
-    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,Cambria,"Times New Roman",serif;
-    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    /* published tints (percentages from the colour chart) */
+    --blue-20:#D7F1F7;
+    --blue-40:#AFE4F0;
+    --green-20:#F4F7DA;
+    --green-40:#E9EFB5;
+    --yellow-20:#FEF3CD;
+    --yellow-40:#FDE69B;
+    --red-20:#FAD7D5;
+    --grey-60:#F3F3F3;
 
-    --radius:16px;
-    --radius-lg:22px;
-    --shadow:0 1px 2px rgba(11,39,64,.06),0 6px 18px rgba(11,39,64,.07);
-    --shadow-lift:0 2px 4px rgba(11,39,64,.08),0 12px 28px rgba(11,39,64,.11);
+    --heading:"Filson Soft",Futura,"Century Gothic","Avenir Next",Avenir,"Trebuchet MS",system-ui,sans-serif;
+    --body:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+
+    --radius:14px;
+    --radius-lg:20px;
+    --shadow:0 1px 2px rgba(46,46,45,.06),0 6px 18px rgba(46,46,45,.08);
+    --shadow-lift:0 2px 4px rgba(46,46,45,.08),0 12px 28px rgba(46,46,45,.12);
     --maxw:780px;
   }
 
@@ -89,87 +132,75 @@
   html{-webkit-text-size-adjust:100%}
   body{
     margin:0;
-    background:var(--bg);
+    background:var(--grey);
     color:var(--ink);
-    font-family:var(--sans);
+    font-family:var(--body);
     font-size:18px;
     line-height:1.65;
   }
   @media (min-width:700px){ body{font-size:19px} }
 
-  /* ---------- type ---------- */
-  h1,h2,h3{font-family:var(--serif);color:var(--navy);font-weight:600;letter-spacing:-.01em;margin:0}
-  h1{font-size:1.9rem;line-height:1.25}
-  h2{font-size:1.6rem;line-height:1.3}
-  h3{font-size:1.15rem;line-height:1.35}
-  @media (min-width:700px){ h1{font-size:2.3rem} h2{font-size:1.85rem} }
+  /* ---------- type ----------
+     Filson Soft Black for headings, sentence case only. */
+  h1,h2,h3{font-family:var(--heading);color:var(--ink);font-weight:900;margin:0;line-height:1.25}
+  h1{font-size:1.85rem}
+  h2{font-size:1.55rem}
+  h3{font-size:1.2rem}
+  @media (min-width:700px){ h1{font-size:2.2rem} h2{font-size:1.8rem} }
+
+  /* the brand's square marker in front of a heading */
+  h1::before,h2::before{
+    content:"";display:inline-block;
+    width:.5em;height:.5em;background:var(--green);
+    margin-right:.42em;vertical-align:.04em;
+  }
   p{margin:0 0 1rem}
   p:last-child{margin-bottom:0}
 
   .eyebrow{
-    font-family:var(--sans);
-    font-size:.75rem;
-    font-weight:700;
-    letter-spacing:.14em;
-    text-transform:uppercase;
-    color:var(--teal-ink);
-    margin:0 0 .5rem;
+    font-family:var(--body);font-size:.85rem;font-weight:700;color:var(--ink);
+    margin:0 0 .5rem;display:flex;align-items:center;gap:.45rem;
   }
-  .lead{font-size:1.08rem;color:var(--muted)}
+  .eyebrow::before{content:"";width:9px;height:9px;background:var(--blue);flex:none}
+  .lead{font-size:1.05rem}
 
-  /* French support lines: hidden until the learner asks for them */
-  .fr{
-    display:none;
-    font-style:italic;
-    color:var(--muted);
-    font-size:.92em;
-  }
+  .fr{display:none;font-style:italic;color:#585857;font-size:.94em}
   body.show-fr .fr{display:block}
-  body.show-fr .fr-inline{display:inline}
 
   /* ---------- shell ---------- */
-  .masthead{
-    z-index:20;
-    background:rgba(255,255,255,.96);
-    backdrop-filter:saturate(1.4) blur(6px);
-    border-bottom:1px solid var(--line);
-  }
+  .masthead{z-index:20;background:#fff;border-bottom:4px solid var(--blue)}
+  @media (min-width:700px){ .masthead{position:sticky;top:0} }
   .masthead__inner{
     max-width:var(--maxw);margin:0 auto;
-    padding:.7rem 1.1rem .85rem;
+    padding:.7rem 1.1rem .8rem;
     display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;
   }
-  .brandline{flex:1 1 auto;min-width:0}
-  .brandline .kicker{
-    font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--gold-ink);
+  .logo{display:block;width:118px;height:auto;flex:none}
+  .logo-fallback{
+    display:none;font-family:var(--heading);font-weight:900;
+    font-size:1.15rem;color:var(--ink);letter-spacing:.02em;flex:none;
   }
+  .brandline{flex:1 1 12rem;min-width:0}
+  .brandline .kicker{font-size:.78rem;font-weight:600;color:#585857}
   .brandline .lesson{
-    font-family:var(--serif);color:var(--navy);font-size:1.02rem;font-weight:600;
+    font-family:var(--heading);font-weight:900;color:var(--ink);font-size:1.02rem;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
 
   .rail{display:none}
   body.js .rail{
     display:flex;max-width:var(--maxw);margin:0 auto;
-    padding:0 1.1rem .7rem;
-    gap:5px;
+    padding:0 1.1rem .6rem;gap:5px;
   }
   .rail__seg{
-    flex:1 1 0;
-    height:48px;                /* full 48px keyboard/touch target */
-    padding:0;margin:0;border:0;background:none;cursor:pointer;
+    flex:1 1 0;height:48px;padding:0;margin:0;border:0;background:none;cursor:pointer;
     display:flex;align-items:flex-end;
   }
-  .rail__seg::after{
-    content:"";display:block;width:100%;height:6px;border-radius:99px;
-    background:var(--line);transition:background .2s ease;
-  }
-  .rail__seg[aria-current="step"]::after{background:var(--gold)}
-  .rail__seg.is-done::after{background:var(--teal)}
-  .rail__seg:hover::after{background:var(--navy)}
+  .rail__seg::after{content:"";display:block;width:100%;height:7px;background:var(--grey);transition:background .2s ease}
+  .rail__seg.is-done::after{background:var(--green)}
+  .rail__seg[aria-current="step"]::after{background:var(--blue)}
+  .rail__seg:hover::after{background:var(--ink)}
 
-  @media (min-width:700px){ .masthead{position:sticky;top:0} }
   main{max-width:var(--maxw);margin:0 auto;padding:1.4rem 1.1rem 3rem}
 
   /* ---------- screens ---------- */
@@ -178,70 +209,62 @@
   .screen + .screen{margin-top:1.6rem}
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
-  .screen__count{
-    font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--muted);margin:0 0 .35rem;
-  }
+  .screen__count{font-size:.82rem;font-weight:600;color:#585857;margin:0 0 .35rem}
 
-  .card{
-    background:var(--card);border:1px solid var(--line);
-    border-radius:var(--radius-lg);box-shadow:var(--shadow);
-    padding:1.5rem 1.3rem;
-  }
+  .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:1.5rem 1.3rem}
   @media (min-width:700px){ .card{padding:1.9rem 1.8rem} }
   .card + .card{margin-top:1rem}
 
   /* ---------- buttons ---------- */
   .btn{
     -webkit-appearance:none;appearance:none;
-    font-family:var(--sans);font-size:1rem;font-weight:600;
+    font-family:var(--body);font-size:1rem;font-weight:700;color:var(--ink);
     min-height:48px;padding:.7rem 1.35rem;
     border-radius:99px;border:2px solid transparent;
     display:inline-flex;align-items:center;justify-content:center;gap:.55rem;
     cursor:pointer;text-decoration:none;
-    transition:background .18s ease,color .18s ease,border-color .18s ease,transform .18s ease;
+    transition:background .18s ease,border-color .18s ease,transform .18s ease,filter .18s ease;
   }
-  .btn--primary{background:var(--navy);color:#fff}
-  .btn--primary:hover{background:var(--navy-deep)}
-  .btn--ghost{background:#fff;color:var(--navy);border-color:var(--line)}
-  .btn--ghost:hover{border-color:var(--navy)}
-  .btn--quiet{background:none;color:var(--teal-ink);min-height:44px;padding:.5rem .75rem;font-size:.95rem;text-decoration:underline;text-underline-offset:3px}
+  .btn--primary{background:var(--blue)}
+  .btn--primary:hover{filter:brightness(.93)}
+  .btn--ghost{background:#fff;border-color:var(--grey)}
+  .btn--ghost:hover{border-color:var(--blue)}
+  .btn--quiet{background:none;min-height:44px;padding:.5rem .75rem;font-size:.95rem;text-decoration:underline;text-underline-offset:3px}
   .btn:active{transform:translateY(1px)}
 
-  :focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:6px}
+  :focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:4px}
 
   .actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.4rem}
   .navrow{display:none}
   body.js .navrow{
     display:flex;justify-content:space-between;align-items:center;gap:.7rem;
-    margin-top:1.6rem;padding-top:1.2rem;border-top:1px solid var(--line);
+    margin-top:1.6rem;padding-top:1.2rem;border-top:2px solid var(--grey);
   }
 
   /* ---------- audio button ---------- */
   .audio{
     -webkit-appearance:none;appearance:none;
-    background:var(--teal-soft);color:var(--teal-ink);
+    background:var(--blue-20);color:var(--ink);
     border:2px solid transparent;border-radius:99px;
     min-height:48px;padding:.55rem 1.1rem .55rem .7rem;
-    font-family:var(--sans);font-size:.98rem;font-weight:600;
+    font-family:var(--body);font-size:.98rem;font-weight:700;
     display:inline-flex;align-items:center;gap:.6rem;cursor:pointer;
-    transition:background .18s ease,color .18s ease;
+    transition:background .18s ease;
   }
-  .audio:hover{background:#D2E8E3}
+  .audio:hover{background:var(--blue-40)}
   .audio .ico{
     width:30px;height:30px;flex:none;border-radius:50%;
-    background:var(--teal);color:#fff;
-    display:grid;place-items:center;
+    background:var(--blue);color:var(--ink);display:grid;place-items:center;
   }
   .audio .ico svg{width:14px;height:14px;display:block}
   .audio .ico .pause-glyph{display:none}
-  .audio.is-playing{background:var(--gold-soft);color:var(--gold-ink)}
-  .audio.is-playing .ico{background:var(--gold)}
+  .audio.is-playing{background:var(--yellow-20)}
+  .audio.is-playing .ico{background:var(--yellow)}
   .audio.is-playing .ico .play-glyph{display:none}
   .audio.is-playing .ico .pause-glyph{display:block}
-  .audio.is-missing{background:#F1F4F6;color:var(--muted);cursor:not-allowed}
-  .audio.is-missing .ico{background:#B9C4CD}
-  .audio--round{padding:.55rem;width:48px;height:48px;justify-content:center}
+  .audio.is-missing{background:var(--grey);color:#585857;cursor:not-allowed}
+  .audio.is-missing .ico{background:#ABABAA}
+  .audio--round{padding:.55rem;width:48px;height:48px;justify-content:center;position:relative}
   .audio--round .label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .audio--wide{width:100%;justify-content:flex-start}
 
@@ -251,16 +274,13 @@
   .goals{list-style:none;margin:1.3rem 0 0;padding:0;display:grid;gap:.6rem}
   .goals li{
     display:flex;gap:.75rem;align-items:flex-start;
-    background:var(--gold-soft);border-radius:var(--radius);
-    padding:.75rem .95rem;font-weight:600;color:var(--navy);
+    background:var(--green-20);border-radius:var(--radius);
+    padding:.75rem .95rem;font-weight:700;
   }
-  .goals .tick{width:22px;height:22px;flex:none;margin-top:.15rem;color:var(--gold)}
+  .goals .tick{width:22px;height:22px;flex:none;margin-top:.15rem;color:var(--ink)}
 
   /* ---------- illustration ---------- */
-  .illus{
-    background:linear-gradient(180deg,#EDF3F7 0%,#E4EDF3 100%);
-    border-radius:var(--radius);overflow:hidden;margin:0 0 1.4rem;
-  }
+  .illus{background:var(--blue-20);border-radius:var(--radius);overflow:hidden;margin:0 0 1.4rem}
   .illus svg{display:block;width:100%;height:auto}
 
   /* ---------- choice cards (screen 2) ---------- */
@@ -268,197 +288,176 @@
   @media (min-width:640px){ .choices{grid-template-columns:repeat(3,1fr)} }
   .choice{
     -webkit-appearance:none;appearance:none;text-align:left;
-    background:var(--card);border:2px solid var(--line);border-radius:var(--radius);
-    padding:0;overflow:hidden;cursor:pointer;font-family:var(--sans);
-    transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+    background:#fff;border:3px solid var(--grey);border-radius:var(--radius);
+    padding:0;overflow:hidden;cursor:pointer;font-family:var(--body);color:var(--ink);
+    transition:border-color .18s ease,box-shadow .18s ease;
   }
-  .choice:hover{border-color:var(--teal);box-shadow:var(--shadow-lift)}
-  .choice__art{background:#EDF3F7;display:block}
+  .choice:hover{border-color:var(--blue);box-shadow:var(--shadow-lift)}
+  .choice__art{background:var(--grey-60);display:block}
   .choice__art svg{display:block;width:100%;height:auto}
-  .choice__label{
-    display:flex;align-items:center;gap:.6rem;
-    padding:.85rem .95rem;font-size:1rem;font-weight:600;color:var(--navy);line-height:1.35;
-  }
+  .choice__label{display:flex;align-items:center;gap:.6rem;padding:.85rem .95rem;font-size:1rem;font-weight:700;line-height:1.35}
   .choice__mark{
     width:26px;height:26px;flex:none;border-radius:50%;
-    border:2px solid var(--line);display:grid;place-items:center;color:#fff;
+    border:3px solid var(--grey);display:grid;place-items:center;color:var(--ink);
     transition:background .18s ease,border-color .18s ease;
   }
   .choice__mark svg{width:14px;height:14px;opacity:0}
-  .choice[aria-pressed="true"]{border-color:var(--teal);background:var(--teal-soft)}
-  .choice[aria-pressed="true"] .choice__mark{background:var(--teal);border-color:var(--teal)}
+  .choice[aria-pressed="true"]{border-color:var(--blue);background:var(--blue-20)}
+  .choice[aria-pressed="true"] .choice__mark{background:var(--blue);border-color:var(--blue)}
   .choice[aria-pressed="true"] .choice__mark svg{opacity:1}
 
   /* ---------- feedback ---------- */
   .feedback{margin-top:1.2rem}
   .feedback:empty{margin-top:0}
-  .note{
-    border-radius:var(--radius);padding:.9rem 1.1rem;
-    display:flex;gap:.7rem;align-items:flex-start;font-weight:600;
-  }
-  .note--yes{background:var(--teal-soft);color:var(--teal-ink)}
-  .note--again{background:var(--gold-soft);color:var(--gold-ink)}
+  .note{border-radius:var(--radius);padding:.9rem 1.1rem;display:flex;gap:.7rem;align-items:flex-start;font-weight:700;color:var(--ink)}
+  .note--yes{background:var(--green-20);border-left:8px solid var(--green)}
+  .note--again{background:var(--yellow-20);border-left:8px solid var(--yellow)}
   .note svg{width:22px;height:22px;flex:none;margin-top:.15rem}
 
   /* ---------- people (screen 3) ---------- */
   .people{display:grid;gap:1rem;margin-top:1.3rem}
   @media (min-width:640px){ .people{grid-template-columns:1fr 1fr} }
-  .person{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
-    box-shadow:var(--shadow);padding:1.3rem;text-align:center;
-  }
-  .portrait{
-    width:104px;height:104px;margin:0 auto .9rem;border-radius:50%;
-    background:var(--teal-soft);display:grid;place-items:center;overflow:hidden;
-  }
+  .person{background:#fff;border:3px solid var(--grey);border-radius:var(--radius-lg);padding:1.3rem;text-align:center}
+  .portrait{width:104px;height:104px;margin:0 auto .9rem;border-radius:50%;background:var(--blue-20);display:grid;place-items:center;overflow:hidden}
   .portrait svg{display:block;width:100%;height:100%}
   .portrait img{width:100%;height:100%;object-fit:cover;display:block}
-  .person h3{font-size:1.45rem;margin-bottom:.5rem}
+  .person h3{font-size:1.5rem;margin-bottom:.5rem}
   .person dl{margin:0 0 1rem;display:grid;grid-template-columns:auto 1fr;gap:.2rem .7rem;text-align:left;font-size:.98rem}
-  .person dt{color:var(--muted);font-weight:600}
-  .person dd{margin:0;color:var(--ink);font-weight:600}
-  .person .say{
-    font-family:var(--serif);font-size:1.12rem;color:var(--navy);
-    margin:0 0 .9rem;
-  }
+  .person dt{color:#585857;font-weight:600}
+  .person dd{margin:0;font-weight:700}
+  .person .say{font-family:var(--heading);font-weight:900;font-size:1.14rem;margin:0 0 .9rem}
 
   /* ---------- conversation rail (screen 4) ---------- */
-  .convo{margin-top:1.4rem;position:relative;display:grid;gap:.85rem}
-  .turn{
-    display:grid;grid-template-columns:44px 1fr;gap:.8rem;align-items:start;
-  }
+  .convo{margin-top:1.4rem;display:grid;gap:.85rem}
+  .turn{display:grid;grid-template-columns:44px 1fr;gap:.8rem;align-items:start}
   .turn__who{
     width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
-    font-weight:700;font-size:.95rem;letter-spacing:.02em;
+    font-family:var(--heading);font-weight:900;font-size:1rem;color:var(--ink);
   }
-  .turn--a .turn__who{background:var(--navy);color:#fff}
-  .turn--s .turn__who{background:var(--teal);color:#fff}
+  .turn--a .turn__who{background:var(--blue)}
+  .turn--s .turn__who{background:var(--green)}
   .turn__body{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    border-top-left-radius:6px;padding:.85rem 1rem;
+    background:#fff;border:3px solid var(--grey);border-radius:var(--radius);
+    padding:.8rem 1rem;
     display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:center;justify-content:space-between;
     transition:border-color .18s ease,background .18s ease;
   }
-  .turn.is-playing .turn__body{border-color:var(--gold);background:var(--gold-soft)}
-  .turn__line{
-    font-family:var(--serif);font-size:1.14rem;color:var(--navy);
-    flex:1 1 12rem;margin:0;
-  }
-  .turn__name{
-    display:block;font-family:var(--sans);font-size:.72rem;font-weight:700;
-    letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.15rem;
-  }
+  .turn.is-playing .turn__body{border-color:var(--yellow);background:var(--yellow-20)}
+  .turn__line{font-family:var(--heading);font-weight:900;font-size:1.1rem;flex:1 1 12rem;margin:0}
+  .turn__name{display:block;font-family:var(--body);font-size:.78rem;font-weight:600;color:#585857;margin-bottom:.15rem}
   body.hide-text .turn__line span.words{visibility:hidden}
 
   /* ---------- expression cards (screen 5) ---------- */
   .deck{margin-top:1.3rem}
-  .deck__stage{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
-    box-shadow:var(--shadow);padding:1.5rem 1.3rem;text-align:center;
-  }
-  .deck__icon{
-    width:66px;height:66px;margin:0 auto 1rem;border-radius:50%;
-    background:var(--gold-soft);color:var(--gold-ink);display:grid;place-items:center;
-  }
+  .deck__stage{background:var(--grey-60);border-radius:var(--radius-lg);padding:1.5rem 1.3rem;text-align:center}
+  .deck__icon{width:66px;height:66px;margin:0 auto 1rem;border-radius:50%;background:var(--blue);color:var(--ink);display:grid;place-items:center}
   .deck__icon svg{width:32px;height:32px}
-  .deck__phrase{
-    font-family:var(--serif);font-size:1.75rem;line-height:1.25;color:var(--navy);
-    margin:0 0 .6rem;
-  }
-  @media (min-width:700px){ .deck__phrase{font-size:2.1rem} }
-  .deck__use{color:var(--muted);margin:0 0 1rem}
+  .deck__phrase{font-family:var(--heading);font-weight:900;font-size:1.7rem;line-height:1.25;margin:0 0 .6rem}
+  @media (min-width:700px){ .deck__phrase{font-size:2.05rem} }
+  .deck__use{margin:0 0 1rem}
   .deck__fr{margin-bottom:1rem}
-  .deck__item + .deck__item{margin-top:1.6rem;padding-top:1.6rem;border-top:1px solid var(--line)}
+  .deck__item + .deck__item{margin-top:1.6rem;padding-top:1.6rem;border-top:2px solid var(--grey)}
   body.js .deck__item{display:none}
   body.js .deck__item.is-current{display:block}
   body.js .deck__item + .deck__item{margin-top:0;padding-top:0;border-top:0}
   .deck__nav{display:none;align-items:center;justify-content:space-between;gap:.7rem;margin-top:1rem}
-  .deck__dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-  .deck__dot{
-    width:26px;height:26px;padding:0;border:0;background:none;cursor:pointer;
-    display:grid;place-items:center;
-  }
-  .deck__dot::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--line)}
-  .deck__dot[aria-current="true"]::after{background:var(--gold);transform:scale(1.25)}
-  .deck__dot:hover::after{background:var(--navy)}
   body.js .deck__nav{display:flex}
+  .deck__dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .deck__dot{width:26px;height:26px;padding:0;border:0;background:none;cursor:pointer;display:grid;place-items:center}
+  .deck__dot::after{content:"";width:10px;height:10px;background:var(--grey)}
+  .deck__dot[aria-current="true"]::after{background:var(--blue);transform:scale(1.3)}
+  .deck__dot:hover::after{background:var(--ink)}
   .deck__count{display:none}
-  body.js .deck__count{display:block;font-size:.85rem;color:var(--muted);font-weight:600;text-align:center;margin-top:.6rem}
+  body.js .deck__count{display:block;font-size:.88rem;color:#585857;font-weight:600;text-align:center;margin-top:.6rem}
 
-  /* ---------- quiz (screen 6) ---------- */
-  .q{border-top:1px solid var(--line);padding-top:1.3rem;margin-top:1.3rem}
+  /* ---------- your turn (screen 6) ---------- */
+  .q{border-top:2px solid var(--grey);padding-top:1.3rem;margin-top:1.3rem}
   .q:first-of-type{border-top:0;padding-top:0;margin-top:1.2rem}
-  .q__prompt{font-family:var(--serif);font-size:1.25rem;color:var(--navy);margin:0 0 .9rem}
+  .q__prompt{font-family:var(--heading);font-weight:900;font-size:1.2rem;margin:0 0 .9rem}
   .opts{display:grid;gap:.6rem}
   .opt{
     -webkit-appearance:none;appearance:none;text-align:left;
-    font-family:var(--serif);font-size:1.08rem;color:var(--navy);
-    background:var(--card);border:2px solid var(--line);border-radius:var(--radius);
+    font-family:var(--heading);font-weight:900;font-size:1.05rem;color:var(--ink);
+    background:#fff;border:3px solid var(--grey);border-radius:var(--radius);
     min-height:48px;padding:.75rem 1rem;cursor:pointer;
     display:flex;align-items:center;gap:.75rem;
     transition:border-color .18s ease,background .18s ease;
   }
-  .opt:hover{border-color:var(--navy)}
+  .opt:hover{border-color:var(--blue)}
   .opt__key{
-    width:28px;height:28px;flex:none;border-radius:8px;background:#EEF2F5;
-    display:grid;place-items:center;font-family:var(--sans);font-size:.85rem;font-weight:700;color:var(--muted);
+    width:28px;height:28px;flex:none;border-radius:6px;background:var(--grey);
+    display:grid;place-items:center;font-family:var(--body);font-size:.85rem;font-weight:700;color:#585857;
   }
-  .opt.is-right{border-color:var(--teal);background:var(--teal-soft)}
-  .opt.is-right .opt__key{background:var(--teal);color:#fff}
-  .opt.is-retry{border-color:var(--gold);background:var(--gold-soft)}
-  .opt.is-retry .opt__key{background:var(--gold-ink);color:#fff}
+  .opt.is-right{border-color:var(--green);background:var(--green-20)}
+  .opt.is-right .opt__key{background:var(--green);color:var(--ink)}
+  .opt.is-retry{border-color:var(--yellow);background:var(--yellow-20)}
+  .opt.is-retry .opt__key{background:var(--yellow);color:var(--ink)}
 
-  /* ---------- pronunciation (screen 7) ---------- */
+  /* ---------- listen closely (screen 7) ---------- */
   .hwords{display:grid;gap:.7rem;margin-top:1.2rem}
   @media (min-width:560px){ .hwords{grid-template-columns:repeat(2,1fr)} }
   .hword{
     display:flex;align-items:center;justify-content:space-between;gap:.8rem;
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    background:#fff;border:3px solid var(--grey);border-radius:var(--radius);
     padding:.7rem .8rem .7rem 1.1rem;
   }
-  .hword b{font-family:var(--serif);font-size:1.4rem;font-weight:600;color:var(--navy)}
-  .hword b i{font-style:normal;color:var(--gold-ink);border-bottom:3px solid var(--gold)}
+  .hword b{font-family:var(--heading);font-size:1.35rem;font-weight:900}
+  .hword b i{font-style:normal;border-bottom:5px solid var(--yellow)}
   .sentence{
-    margin-top:1.2rem;background:var(--navy);color:#fff;border-radius:var(--radius-lg);
+    margin-top:1.2rem;background:var(--blue);border-radius:var(--radius-lg);
     padding:1.3rem;display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between;
   }
-  .sentence p{font-family:var(--serif);font-size:1.3rem;margin:0;flex:1 1 14rem}
-  .sentence i{font-style:normal;color:#F3C577;border-bottom:3px solid #F3C577}
-  .sentence .audio{background:rgba(255,255,255,.14);color:#fff}
-  .sentence .audio:hover{background:rgba(255,255,255,.24)}
-  .sentence .audio .ico{background:#fff;color:var(--navy)}
+  .sentence p{font-family:var(--heading);font-weight:900;font-size:1.25rem;margin:0;flex:1 1 14rem;color:var(--ink)}
+  .sentence i{font-style:normal;border-bottom:5px solid #fff}
+  .sentence .audio{background:#fff}
+  .sentence .audio:hover{background:var(--grey)}
 
-  /* ---------- model (screen 8) ---------- */
+  /* ---------- see yourself (screen 8) ---------- */
   .model{margin-top:1.3rem;display:grid;gap:.7rem}
   .model__line{
-    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
-    padding:.9rem 1.1rem;font-family:var(--serif);font-size:1.25rem;color:var(--navy);
+    background:#fff;border:3px solid var(--grey);border-radius:var(--radius);
+    padding:.9rem 1.1rem;font-family:var(--heading);font-weight:900;font-size:1.2rem;
     display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;
   }
   .model__line input{
-    font-family:var(--serif);font-size:1.05rem;color:var(--teal-ink);
-    border:0;border-bottom:2px dashed var(--teal);background:var(--teal-soft);
+    font-family:var(--body);font-size:1rem;font-weight:600;color:var(--ink);
+    border:0;border-bottom:3px solid var(--blue);background:var(--blue-20);
     border-radius:6px 6px 0 0;padding:.3rem .6rem;min-height:44px;min-width:9rem;flex:1 1 9rem;
   }
-  .model__line input::placeholder{color:#8AA6A1}
-  .optional-note{font-size:.9rem;color:var(--muted);margin-top:.9rem}
+  .model__line input::placeholder{color:#585857}
+  .optional-note{font-size:.92rem;color:#585857;margin-top:.9rem}
 
-  /* ---------- recap (screen 9) ---------- */
+  /* ---------- step complete (screen 9) ---------- */
   .recap{display:grid;gap:.5rem;margin:1.3rem 0 0;padding:0;list-style:none}
   @media (min-width:560px){ .recap{grid-template-columns:1fr 1fr} }
-  .recap li{
-    background:var(--teal-soft);border-radius:var(--radius);padding:.7rem 1rem;
-    font-family:var(--serif);font-size:1.1rem;color:var(--navy);
-  }
+  .recap li{background:var(--blue-20);border-radius:var(--radius);padding:.7rem 1rem;font-family:var(--heading);font-weight:900;font-size:1.05rem}
   .nextup{
-    margin-top:1.5rem;border:2px solid var(--gold);background:var(--gold-soft);
-    border-radius:var(--radius-lg);padding:1.2rem;
+    margin-top:1.5rem;background:var(--yellow-20);border-left:10px solid var(--yellow);
+    border-radius:var(--radius);padding:1.2rem;
     display:flex;flex-wrap:wrap;gap:.9rem;align-items:center;justify-content:space-between;
   }
-  .nextup .eyebrow{color:var(--gold-ink);margin-bottom:.15rem}
-  .nextup strong{font-family:var(--serif);font-size:1.3rem;color:var(--navy);font-weight:600}
+  .nextup strong{font-family:var(--heading);font-weight:900;font-size:1.25rem}
 
-  .footnote{max-width:var(--maxw);margin:0 auto;padding:0 1.1rem 2rem;color:var(--muted);font-size:.85rem}
+  .footbar{background:var(--blue);margin-top:0}
+  .footnote{
+    max-width:var(--maxw);margin:0 auto;padding:.8rem 1.1rem;
+    color:var(--ink);font-size:.85rem;font-weight:600;
+    display:flex;align-items:center;gap:.6rem;
+  }
+  .footnote::before{content:"";width:14px;height:14px;background:#fff;flex:none}
+
+  .hword{padding-left:.7rem}
+  .hword__pic{
+    width:54px;height:54px;flex:none;border-radius:12px;background:var(--grey-60);
+    display:grid;place-items:center;overflow:hidden;
+  }
+  .hword__pic svg{width:40px;height:40px;display:block}
+  .hword b{flex:1 1 auto}
+  .sentence__pic{
+    flex:none;width:132px;border-radius:12px;overflow:hidden;background:#fff;
+  }
+  .sentence__pic svg{display:block;width:100%;height:auto}
+  @media (max-width:559px){ .sentence__pic{width:100%} }
 
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
@@ -483,6 +482,11 @@
 
 <header class="masthead">
   <div class="masthead__inner">
+    <!-- PRODUCTION: drop the supplied colour logo (no tagline, light background)
+         at images/pazapa-logo.svg. Never redraw or recolour it. Minimum width
+         is kept above the 3 cm print equivalent and clear space is the padding. -->
+    <img class="logo" id="brandLogo" src="images/pazapa-logo.svg" alt="Pazapa">
+    <span class="logo-fallback" id="brandLogoFallback" aria-hidden="true">Pazapa</span>
     <div class="brandline">
       <div class="kicker">Week 1 · Lesson 1 · Step 1 of 7 — Discover the situation</div>
       <div class="lesson">Introducing Yourself</div>
@@ -502,26 +506,26 @@
     <div class="illus" data-photo-slot="classroom-meeting">
       <svg viewBox="0 0 720 300" role="img" aria-label="Two adults meeting and shaking hands in a classroom.">
         <rect width="720" height="300" fill="none"/>
-        <g fill="none" stroke="#12395C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".22">
+        <g fill="none" stroke="#2E2E2D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".22">
           <rect x="470" y="46" width="190" height="120" rx="8"/><path d="M565 46v120M470 106h190"/>
         </g>
-        <g fill="none" stroke="#14776B" stroke-width="3.2" stroke-linecap="round" opacity=".3">
+        <g fill="none" stroke="#36BBD6" stroke-width="3.2" stroke-linecap="round" opacity=".3">
           <path d="M60 250h600"/><path d="M120 250v-52h180v52M420 250v-40h150v40"/>
         </g>
-        <g fill="none" stroke="#12395C" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+        <g fill="none" stroke="#2E2E2D" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="255" cy="92" r="27"/>
           <path d="M255 119c-38 0-58 24-62 55l-6 44"/>
           <path d="M255 119c34 0 54 20 60 47"/>
           <path d="M315 166l-42 22"/>
         </g>
-        <g fill="none" stroke="#14776B" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+        <g fill="none" stroke="#36BBD6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="415" cy="100" r="27"/>
           <path d="M415 127c38 0 58 24 62 55l6 36"/>
           <path d="M415 127c-32 0-52 19-58 44"/>
           <path d="M357 171l40 19"/>
         </g>
-        <path d="M273 188h24" stroke="#C07C0C" stroke-width="6" stroke-linecap="round"/>
-        <g fill="none" stroke="#C07C0C" stroke-width="3.5" stroke-linecap="round" opacity=".85">
+        <path d="M273 188h24" stroke="#FCC104" stroke-width="6" stroke-linecap="round"/>
+        <g fill="none" stroke="#FCC104" stroke-width="3.5" stroke-linecap="round" opacity=".85">
           <path d="M196 68c-6-6-6-16 0-22M186 78c-12-12-12-32 0-44"/>
           <path d="M478 74c6-6 6-16 0-22M488 84c12-12 12-32 0-44"/>
         </g>
@@ -530,11 +534,11 @@
 
     <p class="eyebrow">Discover the situation</p>
     <h1 id="s1h">Introducing Yourself</h1>
-    <p class="lead" style="margin-top:.6rem">Learn how to meet someone and share basic information.</p>
-    <p class="fr">Apprenez à rencontrer quelqu'un et à donner des informations simples.</p>
+    <p class="lead" style="margin-top:.6rem">Learn how to meet a new person. Learn how to say your name.</p>
+    <p class="fr">Apprenez à rencontrer une nouvelle personne et à dire votre nom.</p>
 
-    <p style="margin-top:1.2rem">Imagine you are joining an English class in your new city. You meet another learner for the first time.</p>
-    <p class="fr">Imaginez que vous rejoignez un cours d'anglais dans votre nouvelle ville. Vous rencontrez une autre personne pour la première fois.</p>
+    <p style="margin-top:1.2rem">You are in a new English class. You meet a new person.</p>
+    <p class="fr">Vous êtes dans un nouveau cours d'anglais. Vous rencontrez une nouvelle personne.</p>
 
     <ul class="goals">
       <li><svg class="tick" aria-hidden="true"><use href="#i-check"/></svg><span>I can say hello.</span></li>
@@ -544,7 +548,7 @@
 
     <div class="actions">
       <button type="button" class="btn btn--primary" data-go="next">Start <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-r"/></svg></button>
-      <button type="button" class="audio" data-audio="intro_w1l1_welcome.mp3">
+      <button type="button" class="audio" data-audio="intro_w1l1_welcome.mp3" data-say="Hello, and welcome. | In this lesson, you meet a new person. | You learn to say your name, your country, and your city.">
         <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
         <span class="label">Listen to the introduction</span>
       </button>
@@ -558,54 +562,77 @@
   <p class="screen__count">Screen 2 of 9</p>
   <div class="card">
     <p class="eyebrow">Choose the situation</p>
-    <h2 id="s2h">Where might you introduce yourself?</h2>
-    <p class="fr">Où pourriez-vous vous présenter ? Choisissez une ou plusieurs situations.</p>
-    <p class="lead" style="margin-top:.6rem">Choose one or more. There is no wrong answer here.</p>
+    <h2 id="s2h">Where can you introduce yourself?</h2>
+    <p class="fr">Où pouvez-vous vous présenter ? Choisissez une ou plusieurs situations.</p>
+    <p class="lead" style="margin-top:.6rem">Choose one. Or choose more. All the answers are good.</p>
 
     <div class="choices" id="choices">
       <!-- PRODUCTION: each .choice__art is a photo slot -->
       <button type="button" class="choice" aria-pressed="false" data-photo-slot="english-class">
         <span class="choice__art">
           <svg viewBox="0 0 300 170" aria-hidden="true">
-            <g fill="none" stroke="#12395C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="72" y="30" width="156" height="70" rx="6"/><path d="M96 54h108M96 74h72"/>
-              <path d="M60 140h180"/><circle cx="120" cy="122" r="12"/><circle cx="180" cy="122" r="12"/>
-            </g>
+            <rect width="300" height="170" fill="#D7F1F7"/>
+            <rect x="72" y="16" width="156" height="60" rx="6" fill="#fff" stroke="#2E2E2D" stroke-width="3"/>
+            <path d="M90 38h120M90 56h78" stroke="#36BBD6" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="110" cy="104" r="17" fill="#36BBD6"/>
+            <path d="M83 141c0-15 12-27 27-27s27 12 27 27z" fill="#36BBD6"/>
+            <circle cx="192" cy="104" r="17" fill="#C9D646"/>
+            <path d="M165 141c0-15 12-27 27-27s27 12 27 27z" fill="#C9D646"/>
+            <rect x="36" y="136" width="228" height="15" rx="7" fill="#FCC104"/>
+            <rect x="118" y="123" width="64" height="13" rx="3" fill="#fff" stroke="#2E2E2D" stroke-width="2.5"/>
           </svg>
         </span>
         <span class="choice__label">
           <span class="choice__mark"><svg aria-hidden="true"><use href="#i-check"/></svg></span>
-          <span>Meeting someone in an English class</span>
+          <span>In an English class</span>
         </span>
       </button>
 
       <button type="button" class="choice" aria-pressed="false" data-photo-slot="school-gate">
         <span class="choice__art">
           <svg viewBox="0 0 300 170" aria-hidden="true">
-            <g fill="none" stroke="#12395C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M60 100 150 44l90 56"/><path d="M84 100v40h132v-40"/><path d="M132 140v-26h36v26"/>
-              <path d="M42 140h216"/>
-            </g>
+            <rect width="300" height="170" fill="#F4F7DA"/>
+            <path d="M150 6v16" stroke="#2E2E2D" stroke-width="3"/>
+            <rect x="150" y="4" width="20" height="13" fill="#E6352B"/>
+            <path d="M150 26 236 78H64Z" fill="#36BBD6"/>
+            <rect x="78" y="78" width="144" height="64" fill="#fff" stroke="#2E2E2D" stroke-width="3"/>
+            <rect x="136" y="100" width="29" height="42" fill="#FCC104"/>
+            <rect x="97" y="94" width="26" height="22" fill="#D7F1F7" stroke="#2E2E2D" stroke-width="2.5"/>
+            <rect x="178" y="94" width="26" height="22" fill="#D7F1F7" stroke="#2E2E2D" stroke-width="2.5"/>
+            <circle cx="46" cy="105" r="14" fill="#C9D646"/>
+            <path d="M25 142c0-11 9-21 21-21s21 10 21 21z" fill="#C9D646"/>
+            <circle cx="256" cy="105" r="14" fill="#FCC104"/>
+            <path d="M235 142c0-11 9-21 21-21s21 10 21 21z" fill="#FCC104"/>
+            <rect x="18" y="142" width="264" height="5" fill="#2E2E2D" opacity=".16"/>
           </svg>
         </span>
         <span class="choice__label">
           <span class="choice__mark"><svg aria-hidden="true"><use href="#i-check"/></svg></span>
-          <span>Speaking to another parent at school</span>
+          <span>At school, with another parent</span>
         </span>
       </button>
 
       <button type="button" class="choice" aria-pressed="false" data-photo-slot="neighbour-door">
         <span class="choice__art">
           <svg viewBox="0 0 300 170" aria-hidden="true">
-            <g fill="none" stroke="#12395C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="96" y="34" width="108" height="106" rx="6"/><path d="M126 140V80h48v60"/>
-              <circle cx="164" cy="112" r="4"/><path d="M54 140h192"/>
-            </g>
+            <rect width="300" height="170" fill="#FEF3CD"/>
+            <rect x="98" y="22" width="106" height="120" fill="#fff" stroke="#2E2E2D" stroke-width="3"/>
+            <rect x="112" y="36" width="78" height="106" fill="#36BBD6"/>
+            <rect x="124" y="50" width="54" height="26" fill="#D7F1F7"/>
+            <circle cx="176" cy="98" r="5.5" fill="#FCC104"/>
+            <rect x="110" y="146" width="82" height="11" rx="4" fill="#C9D646"/>
+            <rect x="222" y="118" width="26" height="24" fill="#E6352B"/>
+            <path d="M235 118v-14" stroke="#2E2E2D" stroke-width="3"/>
+            <circle cx="227" cy="100" r="9" fill="#C9D646"/>
+            <circle cx="244" cy="104" r="7" fill="#C9D646"/>
+            <circle cx="58" cy="88" r="15" fill="#C9D646"/>
+            <path d="M34 142c0-13 11-24 24-24s24 11 24 24z" fill="#C9D646"/>
+            <path d="M78 114l16-13" stroke="#C9D646" stroke-width="10" stroke-linecap="round"/>
           </svg>
         </span>
         <span class="choice__label">
           <span class="choice__mark"><svg aria-hidden="true"><use href="#i-check"/></svg></span>
-          <span>Introducing yourself to a new neighbour</span>
+          <span>At home, with a new neighbour</span>
         </span>
       </button>
     </div>
@@ -625,7 +652,7 @@
   <div class="card">
     <p class="eyebrow">Meet Amina</p>
     <h2 id="s3h">Meet the people</h2>
-    <p style="margin-top:.6rem">Amina and Sarah are meeting for the first time in an English class.</p>
+    <p style="margin-top:.6rem">Amina and Sarah meet for the first time. They are in an English class.</p>
     <p class="fr">Amina et Sarah se rencontrent pour la première fois dans un cours d'anglais.</p>
 
     <div class="people">
@@ -633,8 +660,8 @@
         <!-- PRODUCTION: replace the SVG below with <img src="images/amina.jpg" alt="Amina"> -->
         <div class="portrait" data-photo-slot="amina">
           <svg viewBox="0 0 100 100" role="img" aria-label="Portrait of Amina">
-            <circle cx="50" cy="50" r="50" fill="#E3F1EE"/>
-            <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="Georgia, serif" font-size="38" fill="#12395C">A</text>
+            <circle cx="50" cy="50" r="50" fill="#D7F1F7"/>
+            <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="Futura, Century Gothic, sans-serif" font-weight="700" font-size="36" fill="#2E2E2D">A</text>
           </svg>
         </div>
         <h3>Amina</h3>
@@ -643,7 +670,7 @@
           <dt>From</dt><dd>Morocco</dd>
           <dt>Lives in</dt><dd>Doha, Qatar</dd>
         </dl>
-        <button type="button" class="audio audio--wide" data-audio="character_amina_intro.mp3">
+        <button type="button" class="audio audio--wide" data-audio="character_amina_intro.mp3" data-say="Hello. My name is Amina.">
           <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
           <span class="label">Listen to Amina</span>
         </button>
@@ -653,8 +680,8 @@
         <!-- PRODUCTION: replace the SVG below with <img src="images/sarah.jpg" alt="Sarah"> -->
         <div class="portrait" data-photo-slot="sarah">
           <svg viewBox="0 0 100 100" role="img" aria-label="Portrait of Sarah">
-            <circle cx="50" cy="50" r="50" fill="#FBF1DA"/>
-            <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="Georgia, serif" font-size="38" fill="#12395C">S</text>
+            <circle cx="50" cy="50" r="50" fill="#F4F7DA"/>
+            <text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="Futura, Century Gothic, sans-serif" font-weight="700" font-size="36" fill="#2E2E2D">S</text>
           </svg>
         </div>
         <h3>Sarah</h3>
@@ -663,14 +690,14 @@
           <dt>From</dt><dd>France</dd>
           <dt>Lives in</dt><dd>Doha, Qatar</dd>
         </dl>
-        <button type="button" class="audio audio--wide" data-audio="character_sarah_intro.mp3">
+        <button type="button" class="audio audio--wide" data-audio="character_sarah_intro.mp3" data-say="Hi. I&#39;m Sarah.">
           <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
           <span class="label">Listen to Sarah</span>
         </button>
       </article>
     </div>
 
-    <p class="optional-note">Listen as many times as you like. You do not need to remember every detail.</p>
+    <p class="optional-note">Listen again and again. You do not need to remember everything.</p>
     <p class="fr">Écoutez autant de fois que vous voulez. Il n'est pas nécessaire de tout retenir.</p>
 
     <div class="navrow">
@@ -686,11 +713,11 @@
   <div class="card">
     <p class="eyebrow">Listen</p>
     <h2 id="s4h">Amina meets Sarah</h2>
-    <p class="lead" style="margin-top:.6rem">Listen to the whole conversation, or one line at a time.</p>
+    <p class="lead" style="margin-top:.6rem">Listen to all the conversation. Or listen to one line.</p>
     <p class="fr">Écoutez la conversation. Vous pouvez écouter chaque phrase séparément.</p>
 
     <div class="actions" style="margin-top:1rem">
-      <button type="button" class="audio" data-audio="dialogue_w1l1_full.mp3">
+      <button type="button" class="audio" data-audio="dialogue_w1l1_full.mp3" data-say="Hello. My name is Amina. What&#39;s your name? | Hi. I&#39;m Sarah. Nice to meet you. | Nice to meet you too. Where are you from? | I&#39;m from France. What about you? | I&#39;m from Morocco. | Do you live in Doha? | Yes, I do. I live in Doha.">
         <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
         <span class="label">Listen to the conversation</span>
       </button>
@@ -702,7 +729,7 @@
         <span class="turn__who" aria-hidden="true">A</span>
         <div class="turn__body">
           <p class="turn__line"><span class="turn__name">Amina</span><span class="words">Hello. My name is Amina. What's your name?</span></p>
-          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_01.mp3">
+          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_01.mp3" data-say="Hello. My name is Amina. What&#39;s your name?">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen to this line: Hello. My name is Amina. What's your name?</span>
           </button>
@@ -713,7 +740,7 @@
         <span class="turn__who" aria-hidden="true">S</span>
         <div class="turn__body">
           <p class="turn__line"><span class="turn__name">Sarah</span><span class="words">Hi. I'm Sarah. Nice to meet you.</span></p>
-          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_sarah_01.mp3">
+          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_sarah_01.mp3" data-say="Hi. I&#39;m Sarah. Nice to meet you.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen to this line: Hi. I'm Sarah. Nice to meet you.</span>
           </button>
@@ -724,7 +751,7 @@
         <span class="turn__who" aria-hidden="true">A</span>
         <div class="turn__body">
           <p class="turn__line"><span class="turn__name">Amina</span><span class="words">Nice to meet you too. Where are you from?</span></p>
-          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_02.mp3">
+          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_02.mp3" data-say="Nice to meet you too. Where are you from?">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen to this line: Nice to meet you too. Where are you from?</span>
           </button>
@@ -735,7 +762,7 @@
         <span class="turn__who" aria-hidden="true">S</span>
         <div class="turn__body">
           <p class="turn__line"><span class="turn__name">Sarah</span><span class="words">I'm from France. What about you?</span></p>
-          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_sarah_02.mp3">
+          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_sarah_02.mp3" data-say="I&#39;m from France. What about you?">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen to this line: I'm from France. What about you?</span>
           </button>
@@ -746,7 +773,7 @@
         <span class="turn__who" aria-hidden="true">A</span>
         <div class="turn__body">
           <p class="turn__line"><span class="turn__name">Amina</span><span class="words">I'm from Morocco.</span></p>
-          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_03.mp3">
+          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_03.mp3" data-say="I&#39;m from Morocco.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen to this line: I'm from Morocco.</span>
           </button>
@@ -757,7 +784,7 @@
         <span class="turn__who" aria-hidden="true">S</span>
         <div class="turn__body">
           <p class="turn__line"><span class="turn__name">Sarah</span><span class="words">Do you live in Doha?</span></p>
-          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_sarah_03.mp3">
+          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_sarah_03.mp3" data-say="Do you live in Doha?">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen to this line: Do you live in Doha?</span>
           </button>
@@ -768,7 +795,7 @@
         <span class="turn__who" aria-hidden="true">A</span>
         <div class="turn__body">
           <p class="turn__line"><span class="turn__name">Amina</span><span class="words">Yes, I do. I live in Doha.</span></p>
-          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_04.mp3">
+          <button type="button" class="audio audio--round" data-audio="dialogue_w1l1_amina_04.mp3" data-say="Yes, I do. I live in Doha.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen to this line: Yes, I do. I live in Doha.</span>
           </button>
@@ -788,9 +815,9 @@
   <p class="screen__count">Screen 5 of 9</p>
   <div class="card">
     <p class="eyebrow">Useful expressions</p>
-    <h2 id="s5h">Seven expressions you can use today</h2>
-    <p class="lead" style="margin-top:.6rem">One expression at a time. Listen, then move on when you are ready.</p>
-    <p class="fr">Une expression à la fois. Écoutez, puis continuez quand vous êtes prêt.</p>
+    <h2 id="s5h">Seven useful expressions</h2>
+    <p class="lead" style="margin-top:.6rem">Listen to one expression. Then go to the next expression.</p>
+    <p class="fr">Écoutez une expression. Puis passez à la suivante.</p>
 
     <div class="deck" id="deck">
       <div class="deck__stage">
@@ -799,7 +826,7 @@
           <p class="deck__phrase">"Hello."</p>
           <p class="deck__use">Use this when you meet someone.</p>
           <p class="fr deck__fr">Bonjour.</p>
-          <button type="button" class="audio" data-audio="phrase_hello.mp3">
+          <button type="button" class="audio" data-audio="phrase_hello.mp3" data-say="Hello.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen</span>
           </button>
@@ -810,7 +837,7 @@
           <p class="deck__phrase">"My name is Amina."</p>
           <p class="deck__use">Use this to say your name.</p>
           <p class="fr deck__fr">Je m'appelle Amina.</p>
-          <button type="button" class="audio" data-audio="phrase_my_name_is.mp3">
+          <button type="button" class="audio" data-audio="phrase_my_name_is.mp3" data-say="My name is Amina.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen</span>
           </button>
@@ -819,9 +846,9 @@
         <div class="deck__item">
           <div class="deck__icon"><svg aria-hidden="true"><use href="#i-ask"/></svg></div>
           <p class="deck__phrase">"What's your name?"</p>
-          <p class="deck__use">Use this to ask another person's name.</p>
+          <p class="deck__use">Use this to ask a name.</p>
           <p class="fr deck__fr">Comment vous appelez-vous ?</p>
-          <button type="button" class="audio" data-audio="phrase_whats_your_name.mp3">
+          <button type="button" class="audio" data-audio="phrase_whats_your_name.mp3" data-say="What&#39;s your name?">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen</span>
           </button>
@@ -832,7 +859,7 @@
           <p class="deck__phrase">"I'm from France."</p>
           <p class="deck__use">Use this to say your country.</p>
           <p class="fr deck__fr">Je viens de France.</p>
-          <button type="button" class="audio" data-audio="phrase_im_from.mp3">
+          <button type="button" class="audio" data-audio="phrase_im_from.mp3" data-say="I&#39;m from France.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen</span>
           </button>
@@ -841,9 +868,9 @@
         <div class="deck__item">
           <div class="deck__icon"><svg aria-hidden="true"><use href="#i-ask"/></svg></div>
           <p class="deck__phrase">"Where are you from?"</p>
-          <p class="deck__use">Use this to ask another person's country.</p>
+          <p class="deck__use">Use this to ask a country.</p>
           <p class="fr deck__fr">D'où venez-vous ?</p>
-          <button type="button" class="audio" data-audio="phrase_where_are_you_from.mp3">
+          <button type="button" class="audio" data-audio="phrase_where_are_you_from.mp3" data-say="Where are you from?">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen</span>
           </button>
@@ -854,7 +881,7 @@
           <p class="deck__phrase">"I live in Doha."</p>
           <p class="deck__use">Use this to say your city.</p>
           <p class="fr deck__fr">J'habite à Doha.</p>
-          <button type="button" class="audio" data-audio="phrase_i_live_in.mp3">
+          <button type="button" class="audio" data-audio="phrase_i_live_in.mp3" data-say="I live in Doha.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen</span>
           </button>
@@ -863,9 +890,9 @@
         <div class="deck__item">
           <div class="deck__icon"><svg aria-hidden="true"><use href="#i-hands"/></svg></div>
           <p class="deck__phrase">"Nice to meet you."</p>
-          <p class="deck__use">Use this when meeting someone for the first time.</p>
+          <p class="deck__use">Use this when you meet a new person.</p>
           <p class="fr deck__fr">Enchanté(e).</p>
-          <button type="button" class="audio" data-audio="phrase_nice_to_meet_you.mp3">
+          <button type="button" class="audio" data-audio="phrase_nice_to_meet_you.mp3" data-say="Nice to meet you.">
             <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
             <span class="label">Listen</span>
           </button>
@@ -893,40 +920,40 @@
   <div class="card">
     <p class="eyebrow">Your turn</p>
     <h2 id="s6h">What would you say?</h2>
-    <p class="lead" style="margin-top:.6rem">Three short questions. Try as many times as you like.</p>
+    <p class="lead" style="margin-top:.6rem">Three questions. You can try again and again.</p>
     <p class="fr">Trois questions courtes. Essayez autant de fois que vous voulez.</p>
 
     <div class="q" data-q data-answer="a">
-      <p class="q__prompt">What would you say to tell someone your name?</p>
+      <p class="q__prompt">You want to say your name. What do you say?</p>
       <div class="opts">
         <button type="button" class="opt" data-opt="a"><span class="opt__key">A</span><span>"My name is Amina."</span></button>
         <button type="button" class="opt" data-opt="b"><span class="opt__key">B</span><span>"I'm from France."</span></button>
         <button type="button" class="opt" data-opt="c"><span class="opt__key">C</span><span>"Nice to meet you."</span></button>
       </div>
       <div class="feedback" data-feedback role="status" aria-live="polite"></div>
-      <p class="sr-only" data-correct-text>Yes. "My name is..." tells someone your name.</p>
+      <p class="sr-only" data-correct-text>Yes. "My name is..." says your name.</p>
     </div>
 
     <div class="q" data-q data-answer="a">
-      <p class="q__prompt">What would you say to ask someone's country?</p>
+      <p class="q__prompt">You want to ask a country. What do you say?</p>
       <div class="opts">
         <button type="button" class="opt" data-opt="a"><span class="opt__key">A</span><span>"Where are you from?"</span></button>
         <button type="button" class="opt" data-opt="b"><span class="opt__key">B</span><span>"My name is Sarah."</span></button>
         <button type="button" class="opt" data-opt="c"><span class="opt__key">C</span><span>"Good evening."</span></button>
       </div>
       <div class="feedback" data-feedback role="status" aria-live="polite"></div>
-      <p class="sr-only" data-correct-text>Exactly. "Where are you from?" asks about someone's country.</p>
+      <p class="sr-only" data-correct-text>Yes. "Where are you from?" asks about the country.</p>
     </div>
 
     <div class="q" data-q data-answer="a">
-      <p class="q__prompt">What would you say after meeting someone?</p>
+      <p class="q__prompt">You meet a new person. What do you say?</p>
       <div class="opts">
         <button type="button" class="opt" data-opt="a"><span class="opt__key">A</span><span>"Nice to meet you."</span></button>
         <button type="button" class="opt" data-opt="b"><span class="opt__key">B</span><span>"I live in Doha."</span></button>
         <button type="button" class="opt" data-opt="c"><span class="opt__key">C</span><span>"My name is Amina."</span></button>
       </div>
       <div class="feedback" data-feedback role="status" aria-live="polite"></div>
-      <p class="sr-only" data-correct-text>Good choice. "Nice to meet you." is useful English when you meet someone.</p>
+      <p class="sr-only" data-correct-text>Yes. You say "Nice to meet you." to a new person.</p>
     </div>
 
     <div class="navrow">
@@ -946,29 +973,51 @@
 
     <div class="hwords">
       <div class="hword">
+        <span class="hword__pic"><svg viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="6" y="12" width="52" height="32" rx="10" fill="#FCC104"/>
+            <path d="M20 42l-2 15 17-15z" fill="#FCC104"/>
+            <circle cx="22" cy="28" r="4" fill="#fff"/><circle cx="32" cy="28" r="4" fill="#fff"/><circle cx="42" cy="28" r="4" fill="#fff"/>
+          </svg></span>
         <b><i>H</i>ello.</b>
-        <button type="button" class="audio audio--round" data-audio="pronunciation_hello.mp3">
+        <button type="button" class="audio audio--round" data-audio="pronunciation_hello.mp3" data-say="Hello.">
           <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
           <span class="label">Listen to the word hello</span>
         </button>
       </div>
       <div class="hword">
+        <span class="hword__pic"><svg viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="14" y="18" width="36" height="24" rx="8" fill="#C9D646"/>
+            <path d="M24 40l-2 11 13-11z" fill="#C9D646"/>
+            <circle cx="32" cy="30" r="4.5" fill="#fff"/>
+          </svg></span>
         <b><i>H</i>i.</b>
-        <button type="button" class="audio audio--round" data-audio="pronunciation_hi.mp3">
+        <button type="button" class="audio audio--round" data-audio="pronunciation_hi.mp3" data-say="Hi.">
           <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
           <span class="label">Listen to the word hi</span>
         </button>
       </div>
       <div class="hword">
+        <span class="hword__pic"><svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 8 60 32h-9v22H13V32H4Z" fill="#36BBD6"/>
+            <rect x="26" y="36" width="12" height="18" fill="#fff"/>
+            <rect x="17" y="36" width="7" height="7" fill="#fff"/>
+            <rect x="40" y="36" width="7" height="7" fill="#fff"/>
+          </svg></span>
         <b><i>H</i>ome.</b>
-        <button type="button" class="audio audio--round" data-audio="pronunciation_home.mp3">
+        <button type="button" class="audio audio--round" data-audio="pronunciation_home.mp3" data-say="Home.">
           <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
           <span class="label">Listen to the word home</span>
         </button>
       </div>
       <div class="hword">
+        <span class="hword__pic"><svg viewBox="0 0 64 64" aria-hidden="true">
+            <rect x="11" y="16" width="42" height="38" fill="#36BBD6"/>
+            <rect x="26" y="8" width="12" height="8" fill="#36BBD6"/>
+            <path d="M32 24v16M24 32h16" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+            <rect x="8" y="54" width="48" height="4" fill="#2E2E2D" opacity=".16"/>
+          </svg></span>
         <b><i>H</i>ospital.</b>
-        <button type="button" class="audio audio--round" data-audio="pronunciation_hospital.mp3">
+        <button type="button" class="audio audio--round" data-audio="pronunciation_hospital.mp3" data-say="Hospital.">
           <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
           <span class="label">Listen to the word hospital</span>
         </button>
@@ -976,14 +1025,26 @@
     </div>
 
     <div class="sentence">
+      <span class="sentence__pic">
+        <svg viewBox="0 0 160 76" aria-hidden="true">
+          <rect width="160" height="76" fill="#fff"/>
+          <path d="M34 14 58 34h-7v26H17V34h-7Z" fill="#36BBD6"/>
+          <rect x="29" y="42" width="10" height="18" fill="#fff"/>
+          <rect x="96" y="20" width="42" height="40" fill="#C9D646"/>
+          <rect x="111" y="12" width="12" height="8" fill="#C9D646"/>
+          <path d="M117 28v16M109 36h16" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+          <path d="M8 66h144" stroke="#2E2E2D" stroke-width="4" stroke-linecap="round" opacity=".2"/>
+          <path d="M62 66h28" stroke="#FCC104" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </span>
       <p>"<i>H</i>ello. I live near the <i>h</i>ospital."</p>
-      <button type="button" class="audio" data-audio="pronunciation_sentence_h.mp3">
+      <button type="button" class="audio" data-audio="pronunciation_sentence_h.mp3" data-say="Hello. I live near the hospital.">
         <span class="ico"><svg class="play-glyph" aria-hidden="true"><use href="#i-play"/></svg><svg class="pause-glyph" aria-hidden="true"><use href="#i-pause"/></svg></span>
         <span class="label">Listen again</span>
       </button>
     </div>
 
-    <p class="optional-note">Just listening for now. There is nothing to record and nothing to score.</p>
+    <p class="optional-note">Only listen. You do not speak. There is no score.</p>
     <p class="fr">Écoutez simplement. Il n'y a rien à enregistrer.</p>
 
     <div class="navrow">
@@ -998,7 +1059,7 @@
   <p class="screen__count">Screen 8 of 9</p>
   <div class="card">
     <p class="eyebrow">See yourself in the situation</p>
-    <h2 id="s8h">Imagine you are meeting someone in your English class</h2>
+    <h2 id="s8h">You meet a new person in your English class</h2>
     <p class="lead" style="margin-top:.6rem">Say the sentences quietly to yourself.</p>
     <p class="fr">Dites les phrases doucement, pour vous.</p>
 
@@ -1009,8 +1070,8 @@
       <p class="model__line"><span>Nice to meet you.</span></p>
     </div>
 
-    <p class="optional-note">Writing here is optional. Nothing is sent, saved or marked. You can use any name or city you like.</p>
-    <p class="fr">Écrire ici est facultatif. Rien n'est enregistré ni corrigé.</p>
+    <p class="optional-note">You can write here. It is not necessary. Nothing is saved. Use any name and any city.</p>
+    <p class="fr">Vous pouvez écrire ici. Ce n'est pas obligatoire. Rien n'est enregistré.</p>
 
     <div class="navrow">
       <button type="button" class="btn btn--ghost" data-go="prev"><svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-l"/></svg> Back</button>
@@ -1024,8 +1085,8 @@
   <p class="screen__count">Screen 9 of 9</p>
   <div class="card">
     <p class="eyebrow">Step complete</p>
-    <h2 id="s9h">Well done. You discovered how to introduce yourself.</h2>
-    <p class="lead" style="margin-top:.6rem">You are building confidence. These are the expressions you met today.</p>
+    <h2 id="s9h">Well done. Now you can introduce yourself.</h2>
+    <p class="lead" style="margin-top:.6rem">Good work. Here are the expressions from today.</p>
     <p class="fr">Vous progressez. Voici les expressions découvertes aujourd'hui.</p>
 
     <ul class="recap">
@@ -1056,7 +1117,7 @@
 
 </main>
 
-<p class="footnote">Pazapa · English Programme for Adults · Week 1, Lesson 1 · Discover the situation</p>
+<div class="footbar"><p class="footnote">Pazapa · English Programme for Adults · Week 1, Lesson 1 · Discover the situation</p></div>
 
 <script>
 (function () {
@@ -1121,13 +1182,55 @@
   });
 
   /* ---------------------------------------------------------
-     AUDIO  — one clip at a time, never autoplayed.
-     A missing file switches the button to a quiet
-     "Audio coming soon" state; the written text always stays.
+     AUDIO — two layers, one clip at a time, never autoplayed.
+
+     1. A recorded mp3 in the "audio/" folder is always used first.
+     2. If that file is not there, the activity speaks the line with
+        the device voice, forced to British English and slowed to a
+        pace an A1 learner can follow. The exact words for every clip
+        are in each button's data-say attribute, so this file doubles
+        as the recording script for the studio.
+     3. If the device has no speech either, the button goes quiet and
+        the written text carries the activity.
   --------------------------------------------------------- */
   var player = new Audio();
   player.preload = "none";
   var activeBtn = null;
+  var fellBackFor = null;
+
+  var synth = window.speechSynthesis || null;
+  var voice = null;
+  var SPEECH_RATE = 0.82;   /* slow enough for A1, still natural */
+
+  /* Prefer a British female voice, by name, across the common platforms. */
+  function pickVoice() {
+    if (!synth || !synth.getVoices) return null;
+    var all = synth.getVoices() || [];
+    var gb = all.filter(function (v) { return /^en[-_]GB/i.test(v.lang); });
+    var wanted = ["serena", "kate", "sonia", "libby", "hazel", "stephanie",
+                  "martha", "google uk english female", "female"];
+    for (var i = 0; i < wanted.length; i++) {
+      var hit = gb.filter(function (v) {
+        return v.name.toLowerCase().indexOf(wanted[i]) > -1;
+      })[0];
+      if (hit) return hit;
+    }
+    var male = ["daniel", "george", "oliver", "arthur", "male"];
+    var notMale = gb.filter(function (v) {
+      var n = v.name.toLowerCase();
+      return !male.some(function (m) { return n.indexOf(m) > -1; });
+    });
+    return notMale[0] || gb[0] ||
+           all.filter(function (v) { return /^en/i.test(v.lang); })[0] || null;
+  }
+
+  if (synth) {
+    voice = pickVoice();
+    /* voice lists load asynchronously in most browsers */
+    if (typeof synth.onvoiceschanged !== "undefined") {
+      synth.onvoiceschanged = function () { voice = pickVoice(); };
+    }
+  }
 
   function labelOf(btn) { return btn.querySelector(".label"); }
 
@@ -1141,6 +1244,7 @@
 
   function stopAudio() {
     if (player) player.pause();
+    if (synth) synth.cancel();
     clearActive();
   }
 
@@ -1154,9 +1258,42 @@
     }
   }
 
+  /* Speak the line, pausing between the parts separated by "|". */
+  function speak(btn) {
+    var text = btn.getAttribute("data-say");
+    if (!synth || !window.SpeechSynthesisUtterance || !text) {
+      markMissing(btn); clearActive(); return;
+    }
+    synth.cancel();
+    var parts = text.split("|").map(function (t) { return t.trim(); })
+                    .filter(function (t) { return t.length > 0; });
+    var i = 0;
+    function next() {
+      if (activeBtn !== btn) return;
+      if (i >= parts.length) { clearActive(); return; }
+      var u = new SpeechSynthesisUtterance(parts[i++]);
+      u.lang = "en-GB";
+      u.rate = SPEECH_RATE;
+      u.pitch = 1;
+      if (voice) u.voice = voice;
+      u.onend = function () { setTimeout(next, 450); };
+      u.onerror = function () {
+        if (activeBtn === btn) { markMissing(btn); clearActive(); }
+      };
+      synth.speak(u);
+    }
+    next();
+  }
+
+  function fallback(btn) {
+    if (fellBackFor === btn) return;   /* both error paths can fire */
+    fellBackFor = btn;
+    speak(btn);
+  }
+
   player.addEventListener("ended", clearActive);
   player.addEventListener("error", function () {
-    if (activeBtn) { markMissing(activeBtn); clearActive(); }
+    if (activeBtn) fallback(activeBtn);
   });
 
   document.addEventListener("click", function (e) {
@@ -1167,6 +1304,7 @@
     if (activeBtn === btn) { stopAudio(); return; }
 
     stopAudio();
+    fellBackFor = null;
     activeBtn = btn;
     btn.classList.add("is-playing");
     var turn = btn.closest("[data-turn]");
@@ -1175,10 +1313,12 @@
     player.src = AUDIO_BASE + btn.getAttribute("data-audio");
     var p = player.play();
     if (p && typeof p.catch === "function") {
-      p.catch(function () {
-        if (activeBtn === btn) { markMissing(btn); clearActive(); }
-      });
+      p.catch(function () { if (activeBtn === btn) fallback(btn); });
     }
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) stopAudio();
   });
 
   /* ---------------------------------------------------------
@@ -1213,7 +1353,7 @@
       var any = choiceBtns.some(function (b) { return b.getAttribute("aria-pressed") === "true"; });
       fb2.innerHTML = any
         ? '<p class="note note--yes"><svg aria-hidden="true"><use href="#i-check"/></svg>' +
-          '<span>Yes. You can introduce yourself in many everyday situations.</span></p>'
+          '<span>Yes. You can introduce yourself in many places.</span></p>'
         : "";
     });
   });
@@ -1258,9 +1398,9 @@
      SCREEN 6 — unlimited retries, supportive feedback only
   --------------------------------------------------------- */
   var retryLines = [
-    "Try again. Listen once more if you like.",
-    "Not this one. Think about the question and try again.",
-    "Try again — the answer is one of the other two."
+    "Try again. You can listen again.",
+    "Not this one. Try again.",
+    "Try again. Choose another answer."
   ];
 
   Array.prototype.slice.call(document.querySelectorAll("[data-q]")).forEach(function (q, qi) {
@@ -1280,6 +1420,17 @@
           : '<p class="note note--again"><svg aria-hidden="true"><use href="#i-again"/></svg><span>' + retryLines[qi % retryLines.length] + "</span></p>";
       });
     });
+  });
+
+  /* ---------------------------------------------------------
+     LOGO — show a plain-text fallback if the supplied file is absent,
+     rather than a broken image. The logo itself is never redrawn.
+  --------------------------------------------------------- */
+  var brandLogo = document.getElementById("brandLogo");
+  var brandLogoFallback = document.getElementById("brandLogoFallback");
+  brandLogo.addEventListener("error", function () {
+    brandLogo.style.display = "none";
+    brandLogoFallback.style.display = "block";
   });
 
   /* ---------------------------------------------------------
