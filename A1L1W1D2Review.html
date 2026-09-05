@@ -46,11 +46,7 @@
   --pz-yellow-40:#FEE69B;
   --pz-yellow-20:#FEF3CD;
 
-  --pz-red:#E6352B;          /* accent + muted error tints below */
-  --pz-red-80:#EB5D55;
-  --pz-red-60:#F08680;
-  --pz-red-40:#F5AEAA;
-  --pz-red-20:#FAD7D5;
+  --pz-red:#E6352B;          /* small decorative accent only — never learner errors */
 
   --pz-grey:#EBEBEB;
 
@@ -196,7 +192,7 @@ button:focus-visible{outline:3px solid var(--pz-dark);outline-offset:3px;}
   font-weight:600;
 }
 .pz-choice.is-retry{
-  background:var(--pz-red-20);border-color:var(--pz-red);border-width:3px;
+  background:var(--pz-yellow-40);border-color:var(--pz-yellow);border-width:3px;
   color:var(--pz-dark);font-weight:600;
 }
 .pz-mark{
@@ -217,7 +213,7 @@ button:focus-visible{outline:3px solid var(--pz-dark);outline-offset:3px;}
   display:none;
 }
 .pz-feedback.is-right{display:block;background:var(--pz-lime-40);color:var(--pz-dark);}
-.pz-feedback.is-retry{display:block;background:var(--pz-red-20);color:var(--pz-dark);}
+.pz-feedback.is-retry{display:block;background:var(--pz-yellow-20);color:var(--pz-dark);}
 .pz-feedback .pz-fr{display:block;font-weight:400;}
 body.no-fr .pz-feedback .pz-fr{display:none;}
 
@@ -1266,22 +1262,33 @@ function findScormApi(){
   return null;
 }
 
+/* An LMS call that returns the string "false" has failed. Anything else,
+   including undefined from a stubbed API, is treated as accepted. */
+function scormOk(result){
+  return !(typeof result === "string" && result.toLowerCase() === "false");
+}
+
 /* SCORM 1.2: cmi.core.lesson_status. SCORM 2004: completion + success status.
-   Commit only — the activity never calls Finish or Terminate. */
+   Initialise first — an API that is already initialised returns "false" here,
+   which is normal and ignored. Commit only: the activity never calls
+   LMSFinish or Terminate, and a failed LMS call never blocks the learner. */
 function sendScormCompletion(){
   var found = null;
   try { found = findScormApi(); } catch(e){ found = null; }
   if (!found) { return false; }
+  var api = found.api;
   try {
     if (found.version === 2004) {
-      found.api.SetValue("cmi.completion_status", "completed");
-      found.api.SetValue("cmi.success_status", "unknown");
-      found.api.Commit("");
-    } else {
-      found.api.LMSSetValue("cmi.core.lesson_status", "completed");
-      found.api.LMSCommit("");
+      try { api.Initialize(""); } catch(e){}
+      var setDone = api.SetValue("cmi.completion_status", "completed");
+      var setPass = api.SetValue("cmi.success_status", "unknown");
+      var saved = api.Commit("");
+      return scormOk(setDone) && scormOk(setPass) && scormOk(saved);
     }
-    return true;
+    try { api.LMSInitialize(""); } catch(e){}
+    var setStatus = api.LMSSetValue("cmi.core.lesson_status", "completed");
+    var committed = api.LMSCommit("");
+    return scormOk(setStatus) && scormOk(committed);
   } catch(e){ return false; }
 }
 
