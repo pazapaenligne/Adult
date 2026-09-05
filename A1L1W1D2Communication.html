@@ -13,10 +13,9 @@
   ============================================================================
   ADMINISTRATOR EDIT POINTS — everything you need to change is in two blocks
   at the top of the script block below:
-      1. CONFIG        — nextActivityUrl, logoUrl, moodleOrigin, font paths
-      2. AUDIO_FILES   — one Base64 Data URL per key (scripts documented there)
+      1. CONFIG        — nextActivityUrl, moodleOrigin, font paths
   No other edits are required. The file is fully self-contained: no network
-  calls, no CDN links, no external audio paths, no text-to-speech.
+  calls, no CDN links, no audio, no text-to-speech.
   ============================================================================
 
   BRAND NOTE
@@ -200,24 +199,6 @@ p.fr{ margin-top: -.6rem; }
 }
 .pz-actions{ display:flex; flex-wrap:wrap; gap:.65rem; margin-top:1.25rem; }
 
-.pz-audio{
-  display:inline-flex; align-items:center; gap:.5rem;
-  min-height: var(--pz-tap);
-  padding: .5rem 1.1rem;
-  border-radius: var(--pz-radius);
-  border: 2px solid var(--pz-dark);
-  background: var(--pz-white);
-  color: var(--pz-dark);
-  cursor:pointer;
-  margin: .25rem .5rem .25rem 0;
-}
-.pz-audio[hidden]{ display:none; }
-.pz-audio .dot{
-  width:12px; height:12px; border-radius:50%;
-  background: var(--pz-cyan); flex:none;
-}
-.pz-audio.is-playing{ border-color: var(--pz-cyan); }
-
 /* ---------- choices ---------- */
 fieldset{ border:0; padding:0; margin:0 0 1rem; }
 legend{ font-family: var(--pz-head); font-weight:900; font-size:1.1rem; padding:0; margin-bottom:.6rem; }
@@ -363,8 +344,8 @@ legend{ font-family: var(--pz-head); font-weight:900; font-size:1.1rem; padding:
   <!-- ============ SCREEN 2 — See the model ============ -->
   <section class="pz-screen" id="s2" aria-labelledby="s2h" hidden>
     <h2 id="s2h" tabindex="-1">See the model</h2>
-    <p>Read the example. Listen if you want to.</p>
-    <p class="fr" lang="fr">Lisez l’exemple. Écoutez si vous le souhaitez.</p>
+    <p>Read the example.</p>
+    <p class="fr" lang="fr">Lisez l’exemple.</p>
 
     <div class="pz-model">
       <p>Hello. I’m Nadia.</p>
@@ -372,16 +353,10 @@ legend{ font-family: var(--pz-head); font-weight:900; font-size:1.1rem; padding:
       <p>I speak Arabic and a little English.</p>
       <p>I am learning English.</p>
     </div>
-    <button type="button" class="pz-audio" data-audio="model-nadia" hidden>
-      <span class="dot" aria-hidden="true"></span>Listen to the model
-    </button>
 
     <h3>A useful question</h3>
     <p>People ask: How old are you?</p>
     <p class="fr" lang="fr">Cette question demande l’âge. Vous pouvez répondre avec un âge fictif.</p>
-    <button type="button" class="pz-audio" data-audio="q-how-old" hidden>
-      <span class="dot" aria-hidden="true"></span>Listen to the question
-    </button>
 
     <div class="pz-actions">
       <button type="button" class="pz-btn" data-next="s3">Carry on</button>
@@ -410,7 +385,6 @@ legend{ font-family: var(--pz-head); font-weight:900; font-size:1.1rem; padding:
       </label>
     </fieldset>
 
-    <div id="s3-audio"></div>
     <p class="pz-feedback ok" id="s3-fb" hidden>Good choice.</p>
 
     <div class="pz-actions">
@@ -462,7 +436,7 @@ legend{ font-family: var(--pz-head); font-weight:900; font-size:1.1rem; padding:
   <section class="pz-screen" id="s5" aria-labelledby="s5h" hidden>
     <h2 id="s5h" tabindex="-1">Check the message</h2>
     <p>Check your four sentences.</p>
-    <p class="fr" lang="fr">Vérifiez vos quatre phrases. Vous pouvez modifier vos choix ou écouter le modèle.</p>
+    <p class="fr" lang="fr">Vérifiez vos quatre phrases. Vous pouvez modifier vos choix.</p>
 
     <ul class="pz-check" id="checklist">
       <li data-key="name"><span class="mark" aria-hidden="true">✓</span><span>Name included</span></li>
@@ -475,9 +449,6 @@ legend{ font-family: var(--pz-head); font-weight:900; font-size:1.1rem; padding:
 
     <div class="pz-actions">
       <button type="button" class="pz-btn pz-btn-quiet" id="change-choices">Change choices</button>
-      <button type="button" class="pz-audio pz-btn-help" data-audio="model-nadia" id="hear-model" hidden>
-        <span class="dot" aria-hidden="true"></span>Hear model
-      </button>
       <button type="button" class="pz-btn" data-next="s6">Carry on</button>
     </div>
   </section>
@@ -578,37 +549,12 @@ var CONFIG = {
 };
 
 /* ===========================================================================
-   2. AUDIO_FILES — administrator edit point
-   Paste one Base64 Data URL per key: "data:audio/mpeg;base64,....".
-   Adult female British-English voices only. No text-to-speech, no synthetic
-   fallback. A key left empty hides its button; it is never replaced.
-
-   REQUIRED SCRIPTS
-   ---------------------------------------------------------------------------
-   model-nadia      Hello. I'm Nadia. I'm 35 years old. I speak Arabic and a
-                    little English. I am learning English.
-   q-how-old        How old are you?
-   profile-nadia    Hello. I'm Nadia. I'm 35 years old. I speak Arabic and a
-                    little English.
-   profile-sara     Hello. I'm Sara. I'm 28 years old. I speak French and Arabic.
-   profile-mariam   Hello. I'm Mariam. I'm 40 years old. I speak Arabic. I am
-                    learning English.
-   --------------------------------------------------------------------------- */
-var AUDIO_FILES = {
-  "model-nadia":    "",
-  "q-how-old":      "",
-  "profile-nadia":  "",
-  "profile-sara":   "",
-  "profile-mariam": ""
-};
-
-/* ===========================================================================
    Content data
    =========================================================================== */
 var WOMEN = {
-  nadia:  { name: "Nadia",  age: "35", lang: "I speak Arabic and a little English.", audio: "profile-nadia" },
-  sara:   { name: "Sara",   age: "28", lang: "I speak French and Arabic.",           audio: "profile-sara" },
-  mariam: { name: "Mariam", age: "40", lang: "I speak Arabic.",                      audio: "profile-mariam" }
+  nadia:  { name: "Nadia",  age: "35", lang: "I speak Arabic and a little English." },
+  sara:   { name: "Sara",   age: "28", lang: "I speak French and Arabic." },
+  mariam: { name: "Mariam", age: "40", lang: "I speak Arabic." }
 };
 
 var SCREENS = ["s1","s2","s3","s4","s5","s6","s7","s8"];
@@ -620,76 +566,10 @@ function $(sel, root){ return (root || document).querySelector(sel); }
 function $all(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
 /* ===========================================================================
-   Audio engine — one element per key, created at startup with the Data URL
-   already attached; play() runs synchronously inside the tap handler.
-   =========================================================================== */
-var players = {};
-var playToken = 0;
-var canPlayMp3 = (function(){
-  try {
-    var a = document.createElement("audio");
-    return !!(a.canPlayType && a.canPlayType("audio/mpeg").replace(/no/, ""));
-  } catch (e) { return false; }
-})();
-
-function hasAudio(key){
-  return canPlayMp3 && typeof AUDIO_FILES[key] === "string" && AUDIO_FILES[key].indexOf("data:audio") === 0;
-}
-
-function buildPlayers(){
-  Object.keys(AUDIO_FILES).forEach(function(key){
-    if (!hasAudio(key)) return;
-    var a = new Audio();
-    a.preload = "auto";
-    a.setAttribute("playsinline", "");
-    a.playsInline = true;
-    a.src = AUDIO_FILES[key];
-    players[key] = a;
-  });
-}
-
-function stopCurrent(){
-  Object.keys(players).forEach(function(k){
-    var a = players[k];
-    try { a.pause(); a.currentTime = 0; } catch (e) {}
-  });
-  $all(".pz-audio.is-playing").forEach(function(b){ b.classList.remove("is-playing"); });
-}
-
-function stopAudio(){
-  playToken++;
-  stopCurrent();
-}
-
-function play(key, btn){
-  var a = players[key];
-  if (!a) return;
-  stopAudio();
-  var token = playToken;
-  a.playbackRate = 1;
-  if (btn) btn.classList.add("is-playing");
-  a.onended = function(){
-    if (token !== playToken) return;
-    if (btn) btn.classList.remove("is-playing");
-  };
-  var p = a.play();
-  if (p && typeof p.catch === "function") {
-    p.catch(function(){ if (btn) btn.classList.remove("is-playing"); });
-  }
-}
-
-function wireAudioButton(btn){
-  var key = btn.getAttribute("data-audio");
-  if (!hasAudio(key)) { btn.hidden = true; return; }
-  btn.hidden = false;
-  btn.addEventListener("click", function(){ play(key, btn); });
-}
-
-/* ===========================================================================
    Navigation
    =========================================================================== */
 function showScreen(id){
-  stopAudio();
+  stopLocalPlayback();
   SCREENS.forEach(function(s){ $("#" + s).hidden = (s !== id); });
   state.current = id;
   var n = SCREENS.indexOf(id) + 1;
@@ -712,7 +592,7 @@ $all("[data-next]").forEach(function(btn){
     if (target === "s5") refreshCheck();
     if (target === "s6") { renderInto("#written-preview"); $("#s6-fb").hidden = false; }
     if (target === "s7") renderInto("#voice-preview");
-    if (target === "s8") stopRecordingIfActive();
+    if (target === "s8") cancelRecording();
     showScreen(target);
   });
 });
@@ -734,8 +614,8 @@ $all('input[name="woman"]').forEach(function(input){
     $("#name-sentence").textContent = "Hello. I’m " + w.name + ".";
     $("#s3-next").disabled = false;
     $("#s3-fb").hidden = false;
-    renderProfileAudioButton(w.audio);
     renderInto("#build-preview");
+    updateS4Next();
   });
 });
 
@@ -743,19 +623,6 @@ function setRadio(name, value){
   $all('input[name="' + name + '"]').forEach(function(r){
     r.checked = (r.value === String(value));
   });
-}
-
-function renderProfileAudioButton(key){
-  var holder = $("#s3-audio");
-  holder.innerHTML = "";
-  if (!hasAudio(key)) return;
-  var b = document.createElement("button");
-  b.type = "button";
-  b.className = "pz-audio";
-  b.setAttribute("data-audio", key);
-  b.innerHTML = '<span class="dot" aria-hidden="true"></span>Listen to this profile';
-  holder.appendChild(b);
-  wireAudioButton(b);
 }
 
 /* ===========================================================================
@@ -818,8 +685,12 @@ $("#change-choices").addEventListener("click", function(){ showScreen("s4"); });
 
 /* ===========================================================================
    Screen 7 — optional voice route (MediaRecorder, local only)
+   Nothing is uploaded, transmitted or stored. A generation token makes any
+   in-flight getUserMedia / onstop callback from a cancelled take harmless.
    =========================================================================== */
-var recorder = null, chunks = [], blobUrl = null, recAudio = null;
+var recorder = null, chunks = [], blobUrl = null, recAudio = null, activeStream = null;
+var recGeneration = 0;   // cancellation token
+var micPending = false;  // guards repeated Record presses while permission is pending
 var recSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
 
 function note(msg){
@@ -829,82 +700,155 @@ function note(msg){
   el.hidden = false;
 }
 
+function setRecButtons(start, stop, play, again, del){
+  $("#rec-start").disabled  = !start;
+  $("#rec-stop").disabled   = !stop;
+  $("#rec-play").disabled   = !play;
+  $("#rec-again").disabled  = !again;
+  $("#rec-delete").disabled = !del;
+}
+
+function resetRecButtons(){ setRecButtons(recSupported, false, false, false, false); }
+
+function stopLocalPlayback(){
+  if (recAudio) {
+    try { recAudio.pause(); recAudio.currentTime = 0; } catch (e) {}
+  }
+}
+
+function stopStream(){
+  if (activeStream) {
+    try {
+      activeStream.getTracks().forEach(function(t){ try { t.stop(); } catch (e) {} });
+    } catch (e) {}
+    activeStream = null;
+  }
+}
+
+function releaseRecording(){
+  stopLocalPlayback();
+  recAudio = null;
+  if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch (e) {} blobUrl = null; }
+  chunks = [];
+}
+
+/* Hard cancel: any pending callback from an earlier take is ignored. */
+function cancelRecording(){
+  recGeneration++;
+  micPending = false;
+  if (recorder) {
+    try { if (recorder.state !== "inactive") recorder.stop(); } catch (e) {}
+    recorder = null;
+  }
+  stopStream();
+  releaseRecording();
+  resetRecButtons();
+}
+
 if (!recSupported) {
   $("#voice-controls").hidden = true;
   note("Recording is not available on this device. You can carry on — the written message is enough.");
+} else {
+  resetRecButtons();
 }
 
 $("#rec-start").addEventListener("click", function(){
-  stopAudio();
+  if (!recSupported || micPending) return;
+  if (recorder && recorder.state === "recording") return;
+
+  cancelRecording();                 // discard any earlier take first
+  var gen = recGeneration;
+  micPending = true;
+  setRecButtons(false, false, false, false, false);
+  note("Waiting for the microphone.");
+
   navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
+    if (gen !== recGeneration) {     // cancelled while permission was pending
+      stream.getTracks().forEach(function(t){ try { t.stop(); } catch (e) {} });
+      return;
+    }
+    micPending = false;
+    activeStream = stream;
     chunks = [];
-    recorder = new MediaRecorder(stream);
-    recorder.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
-    recorder.onstop = function(){
-      stream.getTracks().forEach(function(t){ t.stop(); });
-      if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
-      var blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+
+    var mr;
+    try { mr = new MediaRecorder(stream); }
+    catch (e) {
+      stopStream();
+      resetRecButtons();
+      note("Recording is not available on this device. You can carry on — the written message is enough.");
+      return;
+    }
+    recorder = mr;
+
+    mr.ondataavailable = function(e){
+      if (gen !== recGeneration) return;
+      if (e.data && e.data.size) chunks.push(e.data);
+    };
+
+    mr.onstop = function(){
+      stopStream();
+      if (gen !== recGeneration) { chunks = []; return; }   // cancelled: no Blob URL is created
+      if (!chunks.length) {
+        resetRecButtons();
+        note("No sound was recorded. You can try again.");
+        return;
+      }
+      if (blobUrl) { try { URL.revokeObjectURL(blobUrl); } catch (e) {} blobUrl = null; }
+      var blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" });
       blobUrl = URL.createObjectURL(blob);
       recAudio = new Audio(blobUrl);
       recAudio.setAttribute("playsinline", "");
-      $("#rec-play").disabled = false;
-      $("#rec-again").disabled = false;
-      $("#rec-delete").disabled = false;
+      recAudio.playsInline = true;
+      setRecButtons(true, false, true, true, true);
       note("Your recording stays on this device. You can play it or delete it.");
     };
-    recorder.start();
-    $("#rec-start").disabled = true;
-    $("#rec-stop").disabled = false;
+
+    try { mr.start(); }
+    catch (e) {
+      stopStream();
+      resetRecButtons();
+      note("Recording is not available on this device. You can carry on — the written message is enough.");
+      return;
+    }
+    setRecButtons(false, true, false, false, false);
     note("Recording. Press Stop when you finish.");
+
   }).catch(function(){
+    micPending = false;
+    if (gen !== recGeneration) return;
+    stopStream();
+    resetRecButtons();
     note("The microphone is not available. You can carry on — the written message is enough.");
   });
 });
 
 $("#rec-stop").addEventListener("click", function(){
-  stopRecordingIfActive();
-  $("#rec-stop").disabled = true;
-  $("#rec-start").disabled = false;
+  if (!recorder || recorder.state !== "recording") return;
+  setRecButtons(true, false, false, false, false);   // set first: onstop then enables Play, Record again, Delete
+  try { recorder.stop(); } catch (e) {}
 });
 
 $("#rec-play").addEventListener("click", function(){
   if (!recAudio) return;
-  stopAudio();
   try { recAudio.currentTime = 0; } catch (e) {}
   var p = recAudio.play();
   if (p && typeof p.catch === "function") p.catch(function(){});
 });
 
 $("#rec-again").addEventListener("click", function(){
-  deleteRecording();
+  cancelRecording();
+  note("");
   $("#rec-start").click();
 });
 
 $("#rec-delete").addEventListener("click", function(){
-  deleteRecording();
+  cancelRecording();
   note("Recording deleted.");
 });
 
-function deleteRecording(){
-  if (recAudio) { try { recAudio.pause(); } catch (e) {} }
-  recAudio = null;
-  if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
-  chunks = [];
-  $("#rec-play").disabled = true;
-  $("#rec-again").disabled = true;
-  $("#rec-delete").disabled = true;
-}
-
-function stopRecordingIfActive(){
-  if (recorder && recorder.state === "recording") {
-    try { recorder.stop(); } catch (e) {}
-  }
-}
-
-window.addEventListener("pagehide", function(){
-  stopRecordingIfActive();
-  deleteRecording();
-});
+window.addEventListener("pagehide", function(){ cancelRecording(); });
+window.addEventListener("beforeunload", function(){ cancelRecording(); });
 
 /* ===========================================================================
    Completion — SCORM 1.2, SCORM 2004, trusted Moodle parent message
@@ -1011,9 +955,7 @@ function activityCompleted(){
 }
 
 $("#done-btn").addEventListener("click", function(){
-  stopAudio();
-  stopRecordingIfActive();
-  deleteRecording();
+  cancelRecording();
   activityCompleted();
 
   var done = $("#done-btn");
@@ -1036,9 +978,20 @@ $("#done-btn").addEventListener("click", function(){
 /* ===========================================================================
    Logo
    =========================================================================== */
-if (CONFIG.logoUrl) {
+/* Embedded Base64 PNG, JPEG or WebP only. Anything else keeps the wordmark. */
+function validLogoDataUrl(value){
+  if (typeof value !== "string") return null;
+  var raw = value.trim();
+  var m = /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+\/]+={0,2})$/.exec(raw);
+  if (!m) return null;
+  if (m[2].length < 32) return null;
+  return raw;
+}
+
+var logoSrc = validLogoDataUrl(CONFIG.logoUrl);
+if (logoSrc) {
   var logo = $("#pz-logo");
-  logo.src = CONFIG.logoUrl;
+  logo.src = logoSrc;
   logo.hidden = false;
   $("#pz-wordmark").className = "pz-sr";
 }
@@ -1046,8 +999,6 @@ if (CONFIG.logoUrl) {
 /* ===========================================================================
    Start
    =========================================================================== */
-buildPlayers();
-$all(".pz-audio[data-audio]").forEach(wireAudioButton);
 renderInto("#build-preview");
 showScreen("s1");
 
