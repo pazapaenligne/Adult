@@ -46,7 +46,11 @@
   --pz-yellow-40:#FEE69B;
   --pz-yellow-20:#FEF3CD;
 
-  --pz-red:#E6352B;          /* small accent only — never learner errors */
+  --pz-red:#E6352B;          /* accent + muted error tints below */
+  --pz-red-80:#EB5D55;
+  --pz-red-60:#F08680;
+  --pz-red-40:#F5AEAA;
+  --pz-red-20:#FAD7D5;
 
   --pz-grey:#EBEBEB;
 
@@ -192,7 +196,7 @@ button:focus-visible{outline:3px solid var(--pz-dark);outline-offset:3px;}
   font-weight:600;
 }
 .pz-choice.is-retry{
-  background:var(--pz-yellow-40);border-color:var(--pz-yellow);border-width:3px;
+  background:var(--pz-red-20);border-color:var(--pz-red);border-width:3px;
   color:var(--pz-dark);font-weight:600;
 }
 .pz-mark{
@@ -200,12 +204,20 @@ button:focus-visible{outline:3px solid var(--pz-dark);outline-offset:3px;}
 }
 .pz-choice[disabled]{cursor:default;opacity:1;}
 
+.pz-choice-profile{display:flex;align-items:center;gap:.9rem;}
+.pz-portrait{
+  width:64px;height:auto;flex:0 0 auto;border-radius:6px;display:block;
+}
+.pz-card-figure{
+  float:right;width:78px;height:auto;margin:0 0 .6rem .9rem;border-radius:6px;
+}
+
 .pz-feedback{
   margin:0 0 1rem;padding:.75rem .9rem;border-radius:8px;font-weight:600;
   display:none;
 }
 .pz-feedback.is-right{display:block;background:var(--pz-lime-40);color:var(--pz-dark);}
-.pz-feedback.is-retry{display:block;background:var(--pz-yellow-20);color:var(--pz-dark);}
+.pz-feedback.is-retry{display:block;background:var(--pz-red-20);color:var(--pz-dark);}
 .pz-feedback .pz-fr{display:block;font-weight:400;}
 body.no-fr .pz-feedback .pz-fr{display:none;}
 
@@ -480,8 +492,8 @@ audio{width:100%;margin-top:.6rem;}
       <div class="pz-item">
         <h3>Choose a profile</h3>
         <ul class="pz-choices" data-group="g7profile">
-          <li><button type="button" class="pz-choice" data-profile="amina">Amina — 28 years old — Arabic</button></li>
-          <li><button type="button" class="pz-choice" data-profile="samira">Samira — 42 years old — French</button></li>
+          <li><button type="button" class="pz-choice" data-profile="amina"><span class="pz-choice-profile"><img class="pz-portrait" id="imgAmina" alt="" hidden><span>Amina — 28 years old — Arabic</span></span></button></li>
+          <li><button type="button" class="pz-choice" data-profile="samira"><span class="pz-choice-profile"><img class="pz-portrait" id="imgSamira" alt="" hidden><span>Samira — 42 years old — French</span></span></button></li>
         </ul>
       </div>
 
@@ -582,7 +594,7 @@ audio{width:100%;margin-top:.6rem;}
         <button type="button" class="pz-btn" id="doneBtn" disabled>Done</button>
         <a id="nextLink" class="pz-visually-hidden" href="#">Next activity</a>
       </div>
-      <p class="pz-note pz-hidden" id="doneMsg" role="status" aria-live="polite">Day 2 is saved as complete.</p>
+      <p class="pz-note pz-hidden" id="doneMsg" role="status" aria-live="polite">Activity complete. <span class="pz-fr" lang="fr">Activité terminée.</span></p>
     </section>
 
   </main>
@@ -598,18 +610,29 @@ audio{width:100%;margin-top:.6rem;}
 var CONFIG = {
   activityId: "W1L2-STEP7",
 
-  /* Full https URL of the next Moodle activity. Leave "" to hide the link. */
+  /* Absolute https URL of the next Moodle activity, with no username or
+     password. Anything else leaves the Next activity link hidden. */
   nextActivityUrl: "",
 
-  /* Full https URL of the official Pazapa logo. Leave "" for plain text. */
-  logoUrl: "",
-
   /* Moodle origin for the completion message, e.g. "https://moodle.example.org".
-     Must match ^https?://host — the wildcard "*" is never used. */
+     Scheme and host only: no path, query, fragment or credentials.
+     An invalid or empty value skips postMessage. "*" is never used. */
   moodleOrigin: "",
 
-  /* Slower playback for the audio buttons when a learner holds a button. */
+  /* Slower playback for the audio buttons. */
   slowRate: 0.75
+};
+
+/* ==================================================================
+   1b. IMAGES — ADMIN EDIT POINT
+   Embedded Base64 PNG, JPEG or WebP Data URLs only, so the file stays
+   standalone. Anything else is rejected and the image stays hidden;
+   an invalid logo leaves the Pazapa text wordmark in place.
+   ================================================================== */
+var IMAGES = {
+  logo: "data:image/png;base64,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",
+  aminaPortrait: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKoAAADiCAMAAADpo6yxAAAB/lBMVEX99On24srw1rhGqq3y3MP2zaT6yJk4pao5l5pKsLT0uov1hVj17uE6naFBnqH0lGuw19bzjWNotbXT5+Qyio3Xxab1qYhDmpz0fEyQtqaMyMitu6VrqqUwdnaMq5YxWll2vcLyqnNknZJtp5vM4922x7T0t34rZGZOc2xFjIt7wMKwmnnDv6XLwJx8wb6Qm4P2u6IZen0fm6Q6g30/oZ45sbNEX15JZGFboZZ5iHaNm36Nw7+6sYmxzMHXqIHZvZnY1r3A3dr68d8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACm+idWAAAAgHRSTlP/////////////////////////////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD5DYAAAAAlnSURBVHja7ZwJe9s4DoZNCBIlWbJrJ46dqzk6vabtzO7Osff5/3/U8tBBUZRtybIF9RFS52kbt3kNAh9AgvFsNtlkk0022WSTTTbZZJNNNtlk359dXSX0IZM3d+vIkxY9v/mBsjfvPM4FZSRoOU/5M1nYO83pFca9Z5KRcBVxzzKJ/YYgqVcj9SLxEf6dHqnTZND+SAzV4VMZANtPj5/TO1Kkz07SxePT09PHa05JCN5wl0uvn57+/PvTx8fwJ0KokQv18dOXf8Xxl08fr70r0k7lv3wJggCE/fXxVzqKteZRjfT1Q+CDMv/x+o6wUPF3ceALA/nx8x9/orv+v2WkyuDfj2uyShV5grRgDfzPa7L5z/8RgG+49ZUK6lWN9G2JqVDfrsmGqiYNAnKod9zsUMXjHnzLq1TE6kcDNRWkD5BlU4lKpQSsBeoiQw0F6gb8Kiu8pVJYzSgNPX5rLb+w96RqVebWref5NioESEqrQo26sJ0ayOLKiKD+wHU+qY6F/8Ve/IAQaiaroUb9W+DXjRqqciv/OagKlTJafVWkozV6FdVf1CmTNQBCqBI2CkNFbKKKtlq01gGjg6o6q8yt/JtGVbQgaYHM+ktUWU9FtIZCXDOxyiNAuJXO+itd1ap6LWKAe4WuAtBKKt2tpLpXUay3kMWoZqUTqdKpURanXihYQ9ED5iYDgc7yq74q8rbbkjV9W6LC/TOdpEqL7q9gDV+/5bDvCZ2trVNvsRCZv8hZhVfF452MAv/bLU/pHKxItqL/y2GVbV8/X4vgIHPCnkgv6l51kbMuNOr1tXwNnIpXk3XWqyyM9lq0LVtBGkp0noY0WI3z/9Q6Vs+TLeWcwsZKNCqRF3nNFuqXMLwIyPafR+WcKndsmi60KBRfaDqxYFU7XwZGnHsPHufGcueJtdhut+bJ0PooVNt6I/3vnx42CP7XdyVsuGgKhSs36d5v0B/qeq1fO3wtk2uRWoiLzKusA0t/qLfFQsFtSRimVl4p1H8ybM3i8DnedOooExSWs96npWqVUZD/NpL+x9PXn83nuy6sDI0EgK8lq6qsQk7TrORGEX8vUWvfen/GJ3XU5Xw5vzmRVLBuzMmlZBW20KSRDuoaa9v1v5mv5vMOZ0q2sID/wJsmwv/RqOhkaRKpGmk8Xy7nXdYfa6zwkJpTy6I0iOVHl1sdqKjNiQrz1arL8tvrr76PTK6o1gbwTCnQRsVW6y9SajVfzvpBFaybB86L6xUaNLyFHLUqAkm7/F/OhXVSWjRRsQyCe3nPplx97t1DvrRWBLSTqpvdar7rtqOsOBUNx/r3wrMqDrhsETaA+auwtLUxqRLHC/FloP6hW6mCajaYUeBvbtfKpe9uC9AclR2ByupOZV1TSv5bqGZ/NWTlrnqzkccrpkBUm6VW6y+1f5X0hIq1FAMGlXj2q3rVRv9vpFO7zhNsVMS6zgpc88/tUCuBulutdh0DtYYqfOgoCVBFVc9AS/+xZgVqHGcZfEKgHomK1QjQ4Llbm0I1KfL/Zq4Vv7v2O1EZgKMgVJRBPgVLtx5e/+VqqQhfdl21312sHKjMQs0iF9lhVOVyEIS7m1m869ikNqH6vguVuYKVla1qVZCNrzIt+8JuNPDsvF5FGxVqCl+tUtJMl8uub7VcnhKop6Eqx7GjRFWyCljWL6ojABCrz8q9yg6VKmZov3DqiRtXGxX3oyJkQxflfdnsNPb/KsjLirrbnTr1SMBGdbTaaksrf/nZGCufZmV+M7a8uf6DeoYxP/BPn8/bZD5UmsHSq6IQyJuBvnrk1rimaiYPEPR5XlVHRYY1VMGP+gojBLEwiSk+NU6ymXpWHMPZUVkdVbpUOQp8QaANoZFUB0nMzoxqN1eyCTCvBQnHZqRNJKAH9D3Puuqo4OgBlEu1yXWPA1SwjahxFiW93nUx91MZKtZ2Aoo096sM0hjlOBMb11+nXtzvVNYMTLnyULAqShEOLA7AuHGjEstXXm1E9fXl3J5nnczasqr5L2KeN/LvYhNULL94qMbWsf7JTIvzIS3rqVypSbXOLf3JRM1FCov8rxyhZ1VAi2/c8wDZRAU9UMfSxayKqu8xCLHSXzSbqur/KZ/Z/6UMLDMI1aO2145LjwqX+hCDql+Q7Hn98PKh/6k8mscVwBzHAiKtgkwo45eXQOaUeu7etYrPcCcLq2LvQv0AWUn1UWa/SjgGezXzLJcHsZlU/QWyQCymapRQnwlo9QfWblLRa14hODpVGZQv8sK9wpbKr8oE7L8feCZUqJ8DWlu6zcbPVAjUFUZUrJeZVO1rrmuoyPyNqk66xZbelMT4P7nfc+4ZHEOYfuwQqpy6+CWIRGVgGeb17by3MRH3s6peIOOUv0W1FFmrWDkAQKliszMa2+tWzLqWzH2SfJaxQr6Ryl8FsHPfGgPcQ6ovWak1zgIiy6cievPFxwvcbmt0K2bRB5UDeCj+mWHsQrfwEBr96UPleBUru3u9l2bskpcFs+WtYIKfg1pbGBz2GiPmklNqTsEJ9nHxwD8ckJOV2xIjDO0TmMFRHZRZm00KlTkoyxi1URNqqOgevA2dV2CjYuOMkBSqaxx0piteXbIqV1Fn72Kj4rChWlN6sqjQBhWSIUPVGaPNG9kBUaEVKg6O2ti1Ah21YodQcTyowKgIa2vU4dQK92dVHRWoCsCoUQfLq+RAqBJCZRMqDVQcVKvaoA4mrIcEYEI9R6g6hgQDdayHUWFC7V8AXFOi8aAO1LEeFAAXKk6ox2QVtkqrCfVkrXIGQDIa1EGEFSfUs2nVd4w6RGU9QqvGjooktcp9A388qEBSq0aPmpBERUfWDSCsRwhAw082DYyKhFHZMag4HlT3TzYRRUUC5cqqAJRRsSvq5SsrjA0VHT/JTtyrbVBhYAH4TlHZhHqkrBJGxdGiAmshVmzQCjAiVBwNKjaiOi9jD6pVMB7UNgHARoQKJFGdkQFDyOqIUNkIUOEk1GRAWYU2unrhJsCWVbqoyXhQa1r1vaLigKjQqgcYFLXJq0gAFY8PABy4tbK3K9AK9aKtVa1YjQUVm3QVKaDiSagX7FcSCxWQLCrTqGVdbevV5NKyCp1R2VAVAJpRcTyo5LyKdFFb1FW3rrJLVwDzzegaUYEEKjtUAsihYntUJIaKWazW3kT4kl5llTfXxWPTqnji7MJmvWuKfi8aZwCYr2Q2sCXsgM0mm2yyySab7Cz2f1Uvd68LC5+2AAAAAElFTkSuQmCC",
+  samiraPortrait: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKoAAADiCAMAAADpo6yxAAAB/lBMVEX99OlEqa3Px1L36tj7zaE5lpo8o6f7yZk3nKP88N7y1LHEvEhYg4VPeXplh4jt28Tx7eO5tUTzuonO19Eyi5B0lZSQxseNp6WwqzioubKw1tVBnaLU5+NrtrhUfoBLlpO4sjzTyGm0x8ZSsbPc1orU4dy0wr2Ws6/p47DPt43DzcfvtHvv1pdoaTTOwj3Y0Xg5aW2EnJeLpJXVt2tvqZauqYjHvDjPx6poqamGp2ZxonbYwZlRgntrnHJ3vcDxqXdBbXCFdUSb0c+1qkjydkf0lm0pjqBqg3t2wMGXlTeUqlmKs52rnEvOrFUfh44blJw+cHJZWy9YppphXTVwdDqEfTqHhzODvcC0nGu6wGK2wJ2+4NvJmmbfrW/KqYX1cTzzglP3qIXiwnkle4Q3r8BdlW1gf3xpn6R+so19wL2CnqCkjFOknzGupn22s5bK3+DybTvk4JsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAidR1hAAAAgHRSTlP///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAAAAAAAAAAAAAAAANct+fgAAA7dSURBVHja7Zz5e9s2EoZJUQTBUxQpWZZ1+o6vxLGbOE6TJtkk7fbabu9je+59H///L4sBQBKkSJkmaZp5Hk2byHX8xK+Gg+8bDOBK0ipWsYpVrGIVq1jFKlaxilWsYhWruLVQ7uzc22y1Wpv3du7oTeY8BsoodpSGguo7rYW410jYO63U2Gke6XE6aevhZtNK9l4rMxrGupOB+fL99W5rs1F1ejcV9KOTzz8/ef9l67hBIpWe0i8/PTk5+eILktfm6MBmGqh58unJ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"
 };
 
 /* ==================================================================
@@ -633,18 +656,76 @@ var AUDIO_FILES = {
   /* "A-01": "data:audio/mpeg;base64,...", */
 };
 
-/* ================= brand-safe helpers ================= */
+/* ================= helpers ================= */
 function $(sel, root){ return (root||document).querySelector(sel); }
 function $$(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
-function isSafeUrl(u){ return typeof u === "string" && /^https?:\/\/[^\s"'<>]+$/i.test(u); }
 
-/* ================= header config ================= */
-if (isSafeUrl(CONFIG.logoUrl)) {
-  var logo = $("#pzLogo");
-  logo.src = CONFIG.logoUrl;
-  logo.hidden = false;
-  $("#pzBrandText").className = "pz-visually-hidden";
+/* Moodle origin: https scheme and host only. No wildcard, path, query,
+   fragment, credentials, spaces or non-https scheme. Returns .origin. */
+function validMoodleOrigin(value){
+  if (typeof value !== "string" || !value) { return null; }
+  if (/[\s*]/.test(value)) { return null; }
+  var u;
+  try { u = new URL(value); } catch(e){ return null; }
+  if (u.protocol !== "https:") { return null; }
+  if (u.username || u.password) { return null; }
+  if (u.search || u.hash) { return null; }
+  if (u.pathname && u.pathname !== "/") { return null; }
+  if (!u.hostname) { return null; }
+  return u.origin;
 }
+
+/* Next activity: absolute https URL, no embedded credentials. */
+function validNextUrl(value){
+  if (typeof value !== "string" || !value) { return null; }
+  if (/\s/.test(value)) { return null; }
+  var u;
+  try { u = new URL(value); } catch(e){ return null; }
+  if (u.protocol !== "https:") { return null; }
+  if (u.username || u.password) { return null; }
+  if (!u.hostname) { return null; }
+  return u.href;
+}
+
+/* Images: embedded Base64 PNG, JPEG or WebP only. SVG and script URLs are rejected. */
+function validImageDataUrl(value){
+  if (typeof value !== "string" || !value) { return null; }
+  var clean = value.replace(/\s+/g, "");
+  if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(clean)) { return null; }
+  var b64 = clean.split(",")[1];
+  if (!b64 || b64.length % 4 !== 0) { return null; }
+  return clean;
+}
+
+/* Lesson audio: embedded Base64 audio only. HTTP and javascript URLs are rejected. */
+function validAudioDataUrl(value){
+  if (typeof value !== "string" || !value) { return null; }
+  var clean = value.replace(/\s+/g, "");
+  if (!/^data:audio\/(mpeg|mp3|mp4|aac|ogg|wav|x-wav|webm);base64,[A-Za-z0-9+/]+={0,2}$/.test(clean)) { return null; }
+  var b64 = clean.split(",")[1];
+  if (!b64 || b64.length % 4 !== 0) { return null; }
+  return clean;
+}
+
+/* ================= images ================= */
+(function applyImages(){
+  var logoSrc = validImageDataUrl(IMAGES.logo);
+  if (logoSrc) {
+    var logoEl = $("#pzLogo");
+    logoEl.src = logoSrc;
+    logoEl.alt = "Pazapa";
+    logoEl.hidden = false;
+    $("#pzBrandText").className = "pz-visually-hidden";
+  }
+  [["#imgAmina", IMAGES.aminaPortrait], ["#imgSamira", IMAGES.samiraPortrait]].forEach(function(pair){
+    var el = $(pair[0]);
+    if (!el) { return; }
+    var src = validImageDataUrl(pair[1]);
+    if (!src) { return; }
+    el.src = src;
+    el.hidden = false;
+  });
+})();
 
 /* ================= French support toggle ================= */
 var frBtn = $("#frToggle");
@@ -664,7 +745,7 @@ var currentBtn = null;
 
 (function buildPlayers(){
   Object.keys(AUDIO_FILES).forEach(function(key){
-    var src = AUDIO_FILES[key];
+    var src = validAudioDataUrl(AUDIO_FILES[key]);
     if (!src) { return; }
     var a = new Audio();
     a.preload = "auto";
@@ -877,68 +958,221 @@ wireGroup("g7b", { feedback:"#f7b", rightText:"Yes. We say “years old”.", on
 wireGroup("g7c", { feedback:"#f7c", rightText:"That’s useful English.", onRight:s7Check });
 wireGroup("g7d", { feedback:"#f7d", rightText:"Good choice.", onRight:s7Check });
 
-/* Optional, local-only recording. Nothing is uploaded or stored. */
-var recSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
-var recorder = null, recChunks = [], recUrl = null, recStream = null;
+/* ==================================================================
+   OPTIONAL LOCAL RECORDING — screen 7
+   Nothing is uploaded, transmitted or stored. Every exit path stops the
+   microphone. A generation token cancels stale getUserMedia and onstop
+   callbacks so they can never rebuild a cancelled recording.
+   ================================================================== */
+var recSupported = !!(navigator.mediaDevices &&
+                      typeof navigator.mediaDevices.getUserMedia === "function" &&
+                      typeof window.MediaRecorder === "function");
 
-function recMessage(text){ $("#recMsg").textContent = text || ""; }
+var recGen = 0;           /* current recording generation */
+var recPending = false;   /* waiting for microphone permission */
+var recorder = null;
+var recStream = null;
+var recUrl = null;
+var recChunks = [];
+var recPlayer = null;
 
-function clearRecording(){
+var MSG_UNAVAILABLE = "Recording is not available here. You can say the sentences out loud instead.";
+var MSG_EMPTY = "No sound was recorded. You can try again.";
+var MSG_WAITING = "Waiting for the microphone.";
+var MSG_RECORDING = "Recording. Press Stop when you finish.";
+var MSG_SAVED_LOCAL = "Your recording stays on this page. You can delete it.";
+
+function recMessage(text){
+  var el = $("#recMsg");
+  if (el) { el.textContent = text || ""; }
+}
+
+function stopTracks(stream){
+  if (!stream) { return; }
+  try {
+    var tracks = stream.getTracks ? stream.getTracks() : [];
+    tracks.forEach(function(t){ try { t.stop(); } catch(e){} });
+  } catch(e){}
+}
+
+function removePlayer(){
+  if (recPlayer) {
+    try {
+      recPlayer.pause();
+      recPlayer.removeAttribute("src");
+      recPlayer.load();
+    } catch(e){}
+    if (recPlayer.parentNode) { recPlayer.parentNode.removeChild(recPlayer); }
+    recPlayer = null;
+  }
   var holder = $("#recHolder");
-  holder.innerHTML = "";
-  if (recUrl) { URL.revokeObjectURL(recUrl); recUrl = null; }
-  $("#recDelete").hidden = true;
+  if (holder) { holder.innerHTML = ""; }
+  if (recUrl) {
+    try { URL.revokeObjectURL(recUrl); } catch(e){}
+    recUrl = null;
+  }
+}
+
+function resetRecControls(){
+  var start = $("#recStart"), stop = $("#recStop"), del = $("#recDelete");
+  if (start) { start.hidden = false; start.disabled = false; }
+  if (stop) { stop.hidden = true; }
+  if (del) { del.hidden = true; }
+}
+
+/* Full teardown. Discards any recording and releases the microphone. */
+function cancelRecording(keepMessage){
+  recGen++;
+  recPending = false;
+  if (recorder) {
+    try {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.onerror = null;
+      if (recorder.state !== "inactive") { recorder.stop(); }
+    } catch(e){}
+  }
+  recorder = null;
+  stopTracks(recStream);
+  recStream = null;
+  recChunks = [];
+  removePlayer();
+  resetRecControls();
+  if (!keepMessage) { recMessage(""); }
+}
+
+function buildRecordingPlayer(gen, mimeType){
+  if (gen !== recGen) { return; }
+  var blob = null;
+  try { blob = new Blob(recChunks, { type: mimeType || "audio/webm" }); } catch(e){ blob = null; }
+  recChunks = [];
+  if (!blob || !blob.size) { recMessage(MSG_EMPTY); return; }
+  var url = null;
+  try { url = URL.createObjectURL(blob); } catch(e){ url = null; }
+  if (!url) { recMessage(MSG_UNAVAILABLE); return; }
+  recUrl = url;
+  var player = document.createElement("audio");
+  player.controls = true;
+  player.setAttribute("playsinline", "");
+  player.onerror = function(){ removePlayer(); recMessage(MSG_UNAVAILABLE); };
+  player.src = url;
+  var holder = $("#recHolder");
+  if (!holder) { try { URL.revokeObjectURL(url); } catch(e){} recUrl = null; return; }
+  holder.appendChild(player);
+  recPlayer = player;
+  var del = $("#recDelete");
+  if (del) { del.hidden = false; }
+  recMessage(MSG_SAVED_LOCAL);
+}
+
+function startRecording(){
+  if (!recSupported || recPending || recorder) { return; }
+  stopAudio();
+  cancelRecording(true);            /* discards anything earlier and bumps the generation */
+  var gen = recGen;
+  var start = $("#recStart");
+  recPending = true;
+  if (start) { start.disabled = true; }
+  recMessage(MSG_WAITING);
+
+  var request = null;
+  try { request = navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e){ request = null; }
+  if (!request || typeof request.then !== "function") {
+    recPending = false;
+    if (start) { start.disabled = false; }
+    recMessage(MSG_UNAVAILABLE);
+    return;
+  }
+
+  request.then(function(stream){
+    if (gen !== recGen) { stopTracks(stream); return; }   /* cancelled while waiting */
+    recPending = false;
+    var mr = null;
+    try { mr = new MediaRecorder(stream); } catch(e){ mr = null; }
+    if (!mr) {
+      stopTracks(stream);
+      if (start) { start.disabled = false; }
+      recMessage(MSG_UNAVAILABLE);
+      return;
+    }
+    recStream = stream;
+    recorder = mr;
+    recChunks = [];
+    mr.ondataavailable = function(e){
+      if (gen === recGen && e.data && e.data.size) { recChunks.push(e.data); }
+    };
+    mr.onerror = function(){
+      if (gen !== recGen) { return; }
+      cancelRecording(true);
+      recMessage(MSG_UNAVAILABLE);
+    };
+    mr.onstop = function(){
+      var stream2 = recStream;
+      var mime = mr.mimeType;
+      if (gen !== recGen) { stopTracks(stream2); return; }  /* stale callback */
+      stopTracks(stream2);
+      recStream = null;
+      recorder = null;
+      buildRecordingPlayer(gen, mime);
+    };
+    try { mr.start(); } catch(e){
+      cancelRecording(true);
+      recMessage(MSG_UNAVAILABLE);
+      return;
+    }
+    if (start) { start.hidden = true; start.disabled = false; }
+    var stop = $("#recStop");
+    if (stop) { stop.hidden = false; }
+    recMessage(MSG_RECORDING);
+  }).catch(function(){
+    if (gen !== recGen) { return; }
+    recPending = false;
+    if (start) { start.hidden = false; start.disabled = false; }
+    var stop = $("#recStop");
+    if (stop) { stop.hidden = true; }
+    recMessage(MSG_UNAVAILABLE);
+  });
+}
+
+function stopRecording(){
+  var stop = $("#recStop"), start = $("#recStart");
+  if (stop) { stop.hidden = true; }
+  if (start) { start.hidden = false; start.disabled = false; }
+  if (!recorder) { return; }
+  try {
+    if (recorder.state !== "inactive") {
+      recorder.stop();
+    } else {
+      var mime = recorder.mimeType;
+      stopTracks(recStream);
+      recStream = null;
+      recorder = null;
+      buildRecordingPlayer(recGen, mime);
+    }
+  } catch(e){
+    cancelRecording(true);
+    recMessage(MSG_UNAVAILABLE);
+  }
 }
 
 if (recSupported) {
-  $("#recStart").addEventListener("click", function(){
-    stopAudio();
-    clearRecording();
-    recMessage("");
-    navigator.mediaDevices.getUserMedia({ audio:true }).then(function(stream){
-      recStream = stream;
-      recChunks = [];
-      recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = function(e){ if (e.data && e.data.size) { recChunks.push(e.data); } };
-      recorder.onstop = function(){
-        var blob = new Blob(recChunks, { type: recorder.mimeType || "audio/webm" });
-        recUrl = URL.createObjectURL(blob);
-        var player = document.createElement("audio");
-        player.controls = true;
-        player.src = recUrl;
-        player.setAttribute("playsinline", "");
-        $("#recHolder").appendChild(player);
-        $("#recDelete").hidden = false;
-        if (recStream) { recStream.getTracks().forEach(function(t){ t.stop(); }); recStream = null; }
-      };
-      recorder.start();
-      $("#recStart").hidden = true;
-      $("#recStop").hidden = false;
-      recMessage("Recording. Press Stop when you finish.");
-    }).catch(function(){
-      recMessage("Recording is not available here. You can say the sentences out loud instead.");
-    });
-  });
-
-  $("#recStop").addEventListener("click", function(){
-    if (recorder && recorder.state !== "inactive") { recorder.stop(); }
-    $("#recStop").hidden = true;
-    $("#recStart").hidden = false;
-    recMessage("Your recording stays on this page. You can delete it.");
-  });
-
+  $("#recStart").addEventListener("click", startRecording);
+  $("#recStop").addEventListener("click", stopRecording);
   $("#recDelete").addEventListener("click", function(){
-    clearRecording();
+    cancelRecording(true);
     recMessage("Recording deleted.");
   });
 }
 
 $("#s7skip").addEventListener("click", function(){
-  clearRecording();
+  cancelRecording();
   $("#s7record").classList.add("pz-hidden");
   $("#s7skip").hidden = true;
-  recMessage("");
 });
+
+/* The microphone is always released when the page goes away. */
+window.addEventListener("pagehide", function(){ cancelRecording(true); });
+window.addEventListener("beforeunload", function(){ cancelRecording(true); });
 
 /* ---- screen 8 ---- */
 wireGroup("g8", { feedback:"#f8", anyAnswer:true, rightText:"You’re building confidence." });
@@ -976,9 +1210,13 @@ function refreshNext(){
 
 function showScreen(i){
   stopAudio();
+  /* Leaving screen 7 always stops the microphone and drops any local
+     recording. Answers, the chosen profile and progress are untouched. */
+  if (screens[index] === "s7" && i !== index) { cancelRecording(); }
   screens.forEach(function(id, n){
     var el = $("#" + id);
     el.classList.toggle("is-active", n === i);
+    el.hidden = (n !== i);
   });
   index = i;
   var pct = Math.round(((i + 1) / screens.length) * 100);
@@ -1003,28 +1241,80 @@ $$("[data-next]").forEach(function(btn){
    ================================================================== */
 var completionSent = false;
 
+/* Look for a SCORM API in the parent chain and in an opener chain.
+   Cross-origin access throws, so every step is guarded. */
+function findScormApi(){
+  var roots = [];
+  try { roots.push(window); } catch(e){}
+  try { if (window.parent && window.parent !== window) { roots.push(window.parent); } } catch(e){}
+  try { if (window.top && window.top !== window) { roots.push(window.top); } } catch(e){}
+  try { if (window.opener) { roots.push(window.opener); } } catch(e){}
+
+  for (var r = 0; r < roots.length; r++) {
+    var win = roots[r], hops = 0;
+    while (win && hops < 10) {
+      try {
+        if (win.API_1484_11) { return { api: win.API_1484_11, version: 2004 }; }
+        if (win.API) { return { api: win.API, version: 12 }; }
+      } catch(e){ break; }   /* cross-origin frame: stop climbing this chain */
+      var next = null;
+      try { next = (win.parent && win.parent !== win) ? win.parent : null; } catch(e){ next = null; }
+      win = next;
+      hops++;
+    }
+  }
+  return null;
+}
+
+/* SCORM 1.2: cmi.core.lesson_status. SCORM 2004: completion + success status.
+   Commit only — the activity never calls Finish or Terminate. */
+function sendScormCompletion(){
+  var found = null;
+  try { found = findScormApi(); } catch(e){ found = null; }
+  if (!found) { return false; }
+  try {
+    if (found.version === 2004) {
+      found.api.SetValue("cmi.completion_status", "completed");
+      found.api.SetValue("cmi.success_status", "unknown");
+      found.api.Commit("");
+    } else {
+      found.api.LMSSetValue("cmi.core.lesson_status", "completed");
+      found.api.LMSCommit("");
+    }
+    return true;
+  } catch(e){ return false; }
+}
+
+function sendMoodleMessage(){
+  var origin = validMoodleOrigin(CONFIG.moodleOrigin);
+  if (!origin) { return false; }
+  try {
+    window.parent.postMessage(
+      { type:"pazapa-activity-complete", activityId:CONFIG.activityId },
+      origin
+    );
+    return true;
+  } catch(e){ return false; }
+}
+
 function activityCompleted(){
   if (completionSent) { return; }
   completionSent = true;
-  console.log("W1L2 Step 7 completed");
-  if (isSafeUrl(CONFIG.moodleOrigin)) {
-    try {
-      window.parent.postMessage(
-        { type:"pazapa-activity-complete", activityId:CONFIG.activityId },
-        CONFIG.moodleOrigin
-      );
-    } catch(e){}
-  }
+  try { console.log("W1L2 Step 7 completed"); } catch(e){}
+  sendScormCompletion();
+  sendMoodleMessage();
 }
 
 $("#doneBtn").addEventListener("click", function(){
   stopAudio();
+  cancelRecording();
   activityCompleted();
   $("#doneBtn").disabled = true;
   $("#doneMsg").classList.remove("pz-hidden");
-  if (isSafeUrl(CONFIG.nextActivityUrl)) {
+  var next = validNextUrl(CONFIG.nextActivityUrl);
+  if (next) {
     var link = $("#nextLink");
-    link.href = CONFIG.nextActivityUrl;
+    link.href = next;
     link.className = "";
     link.focus();
   }
