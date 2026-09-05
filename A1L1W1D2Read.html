@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Read for real life — Pazapa English for Adults</title>
+<style>
+/* ------------------------------------------------------------------
+   PAZAPA BRAND COLOURS — official palette only (Brand Guidelines 2017–2018,
+   colour page). Six official colours plus published tints.
+   No derived, invented or off-brand shades.
+
+   ADMIN NOTE: the production prompt for this step asked for
+   "#1B7E92 dark blue for headings". #1B7E92 is not an official Pazapa
+   colour, so headings use official dark #2E2E2D and official cyan #36BBD6
+   for structure, in line with the standing brand rule.
+   ------------------------------------------------------------------ */
+:root{
+  --pz-cyan:#36BBD6;          /* official — structure, borders and rules */
+  --pz-cyan-60:#86D6E6;       /* published 60% tint of cyan (guidelines, colour page) — muted fill */
+  --pz-lime:#C9D646;          /* official — green, used for borders and rules */
+  --pz-lime-60:#DFE690;       /* published 60% tint of lime (guidelines, colour page) — muted success fill
+                                 other published tints if a different weight is wanted:
+                                 80% #D4DE6B   40% #E9EFB5   20% #F4F7DA */
+  --pz-yellow:#FCC104;        /* official — help, borders and rules */
+  --pz-yellow-60:#FDDA68;     /* published 60% tint of yellow (guidelines, colour page) — muted help fill */
+  --pz-red:#E6352B;           /* official — borders and rules */
+  --pz-red-60:#F08680;        /* published 60% tint of red (guidelines, colour page) — muted try-again fill.
+                                 NOTE: the Step 5 prompt says never use red for learner errors. Red is used
+                                 for the try-again state here on your instruction, superseding that line.
+                                 To revert, swap --pz-red-60 for --pz-yellow-60 and --pz-red for --pz-yellow
+                                 in .opt.is-retry and .feedback.retry below. */
+  --pz-grey:#EBEBEB;          /* official — light grey */
+  --pz-dark:#2E2E2D;          /* official — headings and body text */
+  --pz-dark-80:#585857;       /* published 80% tint of dark (guidelines, colour page) */
+
+  --pz-radius:10px;
+  --pz-max:44rem;
+}
+
+/* ------------------------------------------------------------------
+   TYPOGRAPHY
+   Licensed font files are not embedded. The @font-face blocks below stay
+   commented out until the official Filson Soft and Open Sans files are
+   supplied. ADMIN: paste the file paths, then uncomment.
+   Headings: Filson Soft. Body: Open Sans. No all-capitals anywhere.
+   ------------------------------------------------------------------ */
+/*
+@font-face{font-family:"Filson Soft";src:url("FONT_PATH_FILSON_SOFT_BLACK") format("woff2");font-weight:900;font-display:swap;}
+@font-face{font-family:"Open Sans";src:url("FONT_PATH_OPEN_SANS_REGULAR") format("woff2");font-weight:400;font-display:swap;}
+@font-face{font-family:"Open Sans";src:url("FONT_PATH_OPEN_SANS_SEMIBOLD") format("woff2");font-weight:600;font-display:swap;}
+*/
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:"Open Sans",Arial,sans-serif;
+  color:var(--pz-dark);
+  background:#FFFFFF;
+  line-height:1.55;
+  font-size:1.0625rem;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3,.wordmark{
+  font-family:"Filson Soft","Nunito","Open Sans",Arial,sans-serif;
+  font-weight:900;
+  color:var(--pz-dark);
+  line-height:1.25;
+  margin:0 0 .5rem;
+}
+h1{font-size:1.5rem;}
+h2{font-size:1.3125rem;}
+h3{font-size:1.0625rem;}
+p{margin:0 0 .75rem;}
+
+.wrap{max-width:var(--pz-max);margin:0 auto;padding:1rem 1rem 3rem;}
+
+header.site{
+  border-bottom:4px solid var(--pz-cyan);
+  padding:.75rem 0 .6rem;
+  margin-bottom:1rem;
+  display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between;
+}
+.wordmark{font-size:1rem;margin:0;}
+.wordmark[hidden]{display:none;}
+.logo{max-height:44px;width:auto;display:block;}
+.logo[hidden]{display:none;}
+.crumb{font-size:.875rem;color:var(--pz-dark-80);margin:0;}
+
+.progress{font-size:.875rem;color:var(--pz-dark-80);margin:0 0 1rem;}
+
+.screen[hidden]{display:none;}
+.screen h1:focus,.screen h2:focus,.qtext:focus{outline:3px solid var(--pz-cyan);outline-offset:3px;}
+
+/* cards */
+.card{
+  border:2px solid var(--pz-cyan);
+  border-radius:var(--pz-radius);
+  padding:1rem;
+  margin:0 0 1.25rem;
+  background:#FFFFFF;
+}
+.card h3{margin-bottom:.5rem;}
+.field{display:flex;flex-wrap:wrap;gap:.35rem;margin:0 0 .35rem;}
+.field .label{color:var(--pz-dark-80);min-width:7.5rem;}
+.field .value{font-weight:600;}
+.message{background:var(--pz-grey);border-radius:var(--pz-radius);padding:1rem;margin:0 0 1.25rem;}
+.message p{margin:0;font-size:1.125rem;}
+
+.badge{
+  border:2px solid var(--pz-dark);
+  border-radius:var(--pz-radius);
+  padding:1rem;margin:0 0 1.25rem;
+}
+.badge .badge-top{
+  background:var(--pz-cyan-60);color:var(--pz-dark);
+  font-weight:600;border-radius:6px;padding:.35rem .6rem;margin:0 0 .75rem;display:inline-block;
+}
+
+/* questions */
+.qblock[hidden]{display:none;}
+.qblock{margin:0 0 1.5rem;}
+.qtext{font-weight:600;margin:0 0 .6rem;}
+.options{display:flex;flex-direction:column;gap:.6rem;margin:0 0 .75rem;}
+
+button{
+  font-family:inherit;font-size:1rem;line-height:1.4;
+  min-height:48px;min-width:48px;
+  border-radius:var(--pz-radius);
+  cursor:pointer;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+button:focus-visible{outline:3px solid var(--pz-dark);outline-offset:3px;}
+
+.opt{
+  text-align:left;
+  background:#FFFFFF;
+  color:var(--pz-dark);
+  border:2px solid var(--pz-dark-80);
+  padding:.7rem .9rem;
+}
+.opt:hover{border-color:var(--pz-cyan);}
+.opt.is-correct{background:var(--pz-lime-60);border-color:var(--pz-lime);color:var(--pz-dark);font-weight:600;}
+.opt.is-retry{background:var(--pz-red-60);border-color:var(--pz-red);color:var(--pz-dark);}
+.opt[aria-disabled="true"]{cursor:default;}
+
+.feedback{min-height:1.5rem;padding:0;margin:0 0 .5rem;font-size:.9375rem;}
+.feedback.correct{
+  background:var(--pz-lime-60);color:var(--pz-dark);
+  border-left:6px solid var(--pz-lime);
+  border-radius:var(--pz-radius);padding:.6rem .8rem;
+}
+.feedback.retry{
+  background:var(--pz-red-60);color:var(--pz-dark);
+  border-left:6px solid var(--pz-red);
+  border-radius:var(--pz-radius);padding:.6rem .8rem;
+}
+.feedback .mark{font-weight:600;}
+
+.nav{margin:1.5rem 0 0;display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;}
+.btn-main{
+  background:var(--pz-cyan-60);color:var(--pz-dark);
+  border:2px solid var(--pz-cyan);
+  font-weight:600;padding:.7rem 1.4rem;
+}
+.btn-main:hover{background:#FFFFFF;}
+.btn-main[hidden]{display:none;}
+.btn-done{
+  background:var(--pz-lime-60);color:var(--pz-dark);
+  border:2px solid var(--pz-lime);
+  font-weight:600;padding:.7rem 1.4rem;
+}
+.btn-done:disabled{background:var(--pz-grey);border-color:var(--pz-grey);color:var(--pz-dark-80);cursor:default;}
+.btn-quiet{
+  background:#FFFFFF;color:var(--pz-dark);
+  border:2px solid var(--pz-dark-80);
+  padding:.5rem .9rem;font-size:.9375rem;
+}
+.btn-audio{
+  background:#FFFFFF;color:var(--pz-dark);
+  border:2px solid var(--pz-cyan);
+  padding:.5rem .9rem;font-size:.9375rem;font-weight:600;
+  margin:.25rem .5rem .25rem 0;
+}
+.btn-audio[hidden]{display:none;}
+.audio-row{margin:.5rem 0 0;}
+
+/* next-activity link: same 48 px minimum target as a button */
+.link-btn{
+  display:inline-flex;align-items:center;
+  min-height:48px;min-width:48px;
+  padding:.7rem 1.4rem;
+  border:2px solid var(--pz-cyan);border-radius:var(--pz-radius);
+  background:var(--pz-cyan-60);color:var(--pz-dark);
+  font-weight:600;text-decoration:none;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.link-btn:hover{background:#FFFFFF;}
+.link-btn:focus-visible{outline:3px solid var(--pz-dark);outline-offset:3px;}
+.link-btn[hidden]{display:none;}
+
+/* French support */
+.fr{color:var(--pz-dark-80);font-size:.9375rem;}
+body.no-fr .fr{display:none;}
+
+.checklist{list-style:none;padding:0;margin:0 0 1.25rem;}
+.checklist li{
+  border-left:6px solid var(--pz-lime);
+  padding:.4rem .75rem;margin:0 0 .5rem;background:var(--pz-grey);border-radius:0 6px 6px 0;
+}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important;animation:none !important;scroll-behavior:auto !important;}
+}
+@media (max-width: 30rem){
+  h1{font-size:1.375rem;}
+  .field .label{min-width:100%;}
+  .btn-main,.btn-done,.link-btn{width:100%;justify-content:center;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="site">
+    <div>
+      <img id="logo" class="logo" alt="Pazapa English for Adults" hidden>
+      <p class="wordmark" id="wordmark">Pazapa English for Adults</p>
+      <p class="crumb">Week 1, Lesson 2 — Step 5</p>
+    </div>
+    <button type="button" class="btn-quiet" id="frToggle" aria-pressed="true">Masquer le français</button>
+  </header>
+
+  <p class="progress" id="progress">Part 1 of 7</p>
+
+  <main id="main">
+
+    <!-- ============ 1. WELCOME ============ -->
+    <section class="screen" id="s1" aria-labelledby="s1h">
+      <h1 id="s1h" tabindex="-1">Read for real life</h1>
+      <p>Read short profiles from women. Find the age. Find the languages.</p>
+      <p class="fr" lang="fr">Lisez de courts profils de femmes. Repérez leur âge et les langues qu’elles parlent. Toutes les informations sont fictives : vous ne donnez jamais vos propres informations.</p>
+      <p>All the names and ages are fictional.</p>
+      <div class="nav">
+        <button type="button" class="btn-main" data-next="s2">Start</button>
+      </div>
+    </section>
+
+    <!-- ============ 2. READ A PROFILE ============ -->
+    <section class="screen" id="s2" aria-labelledby="s2h" hidden>
+      <h2 id="s2h" tabindex="-1">Read a profile</h2>
+      <p>Read the card. Then answer the question.</p>
+      <p class="fr" lang="fr">Lisez la fiche, puis répondez à la question.</p>
+
+      <div class="card">
+        <h3>Nadia</h3>
+        <p class="field"><span class="label">Age</span><span class="value">35 years old</span></p>
+        <p class="field"><span class="label">Languages</span><span class="value">Arabic and a little English</span></p>
+        <div class="audio-row"><button type="button" class="btn-audio" data-audio="R-01" hidden>Listen</button></div>
+      </div>
+
+      <div class="qblock"
+           data-ok-en="Nadia is 35 years old."
+           data-ok-fr="Nadia a 35 ans."
+           data-try-en="Read the card again. Look for the age."
+           data-try-fr="Relisez la fiche. Cherchez l’âge.">
+        <p class="qtext" id="q2a">How old is Nadia?</p>
+        <div class="options" role="group" aria-labelledby="q2a">
+          <button type="button" class="opt">28</button>
+          <button type="button" class="opt" data-correct="1">35</button>
+          <button type="button" class="opt">40</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn-main" data-next="s3" hidden>Carry on</button>
+      </div>
+    </section>
+
+    <!-- ============ 3. FIND THE LANGUAGE ============ -->
+    <section class="screen" id="s3" aria-labelledby="s3h" hidden>
+      <h2 id="s3h" tabindex="-1">Find the language</h2>
+      <p>Read the card. Then answer the question.</p>
+      <p class="fr" lang="fr">Lisez la fiche, puis répondez à la question.</p>
+
+      <div class="card">
+        <h3>Sara</h3>
+        <p class="field"><span class="label">Age</span><span class="value">28 years old</span></p>
+        <p>“I speak French and Arabic.”</p>
+        <div class="audio-row"><button type="button" class="btn-audio" data-audio="R-02" hidden>Listen</button></div>
+      </div>
+
+      <div class="qblock"
+           data-ok-en="Sara speaks French and Arabic."
+           data-ok-fr="Sara parle français et arabe."
+           data-try-en="Read the card again. Look for the two languages."
+           data-try-fr="Relisez la fiche. Cherchez les deux langues.">
+        <p class="qtext" id="q3a">Which languages does Sara speak?</p>
+        <div class="options" role="group" aria-labelledby="q3a">
+          <button type="button" class="opt">Arabic and English</button>
+          <button type="button" class="opt" data-correct="1">French and Arabic</button>
+          <button type="button" class="opt">French and English</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn-main" data-next="s4" hidden>Carry on</button>
+      </div>
+    </section>
+
+    <!-- ============ 4. READ A SHORT MESSAGE ============ -->
+    <section class="screen" id="s4" aria-labelledby="s4h" hidden>
+      <h2 id="s4h" tabindex="-1">Read a short message</h2>
+      <p>A woman writes about herself. Read her message.</p>
+      <p class="fr" lang="fr">Une femme se présente. Lisez son message.</p>
+
+      <div class="message">
+        <p>Hello. I’m Amina. I’m 40 years old. I speak Arabic. I am learning English.</p>
+        <div class="audio-row"><button type="button" class="btn-audio" data-audio="R-03" hidden>Listen</button></div>
+      </div>
+
+      <div class="qblock"
+           data-ok-en="Amina is learning English."
+           data-ok-fr="Amina apprend l’anglais."
+           data-try-en="Read the message again. Look at the last sentence."
+           data-try-fr="Relisez le message. Regardez la dernière phrase.">
+        <p class="qtext" id="q4a">Why is she in the class?</p>
+        <div class="options" role="group" aria-labelledby="q4a">
+          <button type="button" class="opt">She is 40 years old.</button>
+          <button type="button" class="opt">She speaks Arabic.</button>
+          <button type="button" class="opt" data-correct="1">She is learning English.</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn-main" data-next="s5" hidden>Carry on</button>
+      </div>
+    </section>
+
+    <!-- ============ 5. COMPARE TWO WOMEN ============ -->
+    <section class="screen" id="s5" aria-labelledby="s5h" hidden>
+      <h2 id="s5h" tabindex="-1">Compare two women</h2>
+      <p>Read the two cards. Then answer one question at a time.</p>
+      <p class="fr" lang="fr">Lisez les deux fiches, puis répondez à une question à la fois.</p>
+
+      <div class="card">
+        <h3>Fatima</h3>
+        <p class="field"><span class="label">Age</span><span class="value">30 years old</span></p>
+        <p class="field"><span class="label">Languages</span><span class="value">Arabic</span></p>
+        <div class="audio-row"><button type="button" class="btn-audio" data-audio="R-04" hidden>Listen</button></div>
+      </div>
+
+      <div class="card">
+        <h3>Mariam</h3>
+        <p class="field"><span class="label">Age</span><span class="value">32 years old</span></p>
+        <p class="field"><span class="label">Languages</span><span class="value">French and a little English</span></p>
+        <div class="audio-row"><button type="button" class="btn-audio" data-audio="R-05" hidden>Listen</button></div>
+      </div>
+
+      <div class="qblock"
+           data-ok-en="Fatima is 30 years old."
+           data-ok-fr="Fatima a 30 ans."
+           data-try-en="Read the two cards again. Look for the age."
+           data-try-fr="Relisez les deux fiches. Cherchez l’âge.">
+        <p class="qtext" id="q5a">Who is 30?</p>
+        <div class="options" role="group" aria-labelledby="q5a">
+          <button type="button" class="opt" data-correct="1">Fatima</button>
+          <button type="button" class="opt">Mariam</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="qblock" hidden
+           data-ok-en="Mariam speaks French and a little English."
+           data-ok-fr="Mariam parle français et un peu anglais."
+           data-try-en="Read the two cards again. Look for the languages."
+           data-try-fr="Relisez les deux fiches. Cherchez les langues.">
+        <p class="qtext" id="q5b">Who speaks French?</p>
+        <div class="options" role="group" aria-labelledby="q5b">
+          <button type="button" class="opt">Fatima</button>
+          <button type="button" class="opt" data-correct="1">Mariam</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn-main" data-next="s6" hidden>Carry on</button>
+      </div>
+    </section>
+
+    <!-- ============ 6. READ A CLASS BADGE ============ -->
+    <section class="screen" id="s6" aria-labelledby="s6h" hidden>
+      <h2 id="s6h" tabindex="-1">Read a class badge</h2>
+      <p>This is a badge for an English class for women. Read it.</p>
+      <p class="fr" lang="fr">Voici le badge d’un cours d’anglais pour femmes. Lisez-le.</p>
+
+      <div class="badge">
+        <p class="badge-top">English class for women</p>
+        <p class="field"><span class="label">First name</span><span class="value">Nadia</span></p>
+        <p class="field"><span class="label">Age</span><span class="value">35</span></p>
+        <p class="field"><span class="label">Language</span><span class="value">Arabic</span></p>
+        <div class="audio-row"><button type="button" class="btn-audio" data-audio="R-06" hidden>Listen</button></div>
+      </div>
+
+      <div class="qblock"
+           data-ok-en="Her first name is Nadia."
+           data-ok-fr="Elle s’appelle Nadia."
+           data-try-en="Read the badge again. Look for the first name."
+           data-try-fr="Relisez le badge. Cherchez le prénom.">
+        <p class="qtext" id="q6a">What is her first name?</p>
+        <div class="options" role="group" aria-labelledby="q6a">
+          <button type="button" class="opt">Mariam</button>
+          <button type="button" class="opt" data-correct="1">Nadia</button>
+          <button type="button" class="opt">Sara</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="qblock" hidden
+           data-ok-en="She is 35 years old."
+           data-ok-fr="Elle a 35 ans."
+           data-try-en="Read the badge again. Look for the age."
+           data-try-fr="Relisez le badge. Cherchez l’âge.">
+        <p class="qtext" id="q6b">How old is she?</p>
+        <div class="options" role="group" aria-labelledby="q6b">
+          <button type="button" class="opt">30</button>
+          <button type="button" class="opt" data-correct="1">35</button>
+          <button type="button" class="opt">40</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="qblock" hidden
+           data-ok-en="Nadia speaks Arabic."
+           data-ok-fr="Nadia parle arabe."
+           data-try-en="Read the badge again. Look for the language."
+           data-try-fr="Relisez le badge. Cherchez la langue.">
+        <p class="qtext" id="q6c">Which language does she speak?</p>
+        <div class="options" role="group" aria-labelledby="q6c">
+          <button type="button" class="opt" data-correct="1">Arabic</button>
+          <button type="button" class="opt">French</button>
+          <button type="button" class="opt">English</button>
+        </div>
+        <p class="feedback" role="status" aria-live="polite"></p>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn-main" data-next="s7" hidden>Carry on</button>
+      </div>
+    </section>
+
+    <!-- ============ 7. COMPLETION ============ -->
+    <section class="screen" id="s7" aria-labelledby="s7h" hidden>
+      <h2 id="s7h" tabindex="-1">You read real-life English</h2>
+      <p>You found ages and languages.</p>
+      <p class="fr" lang="fr">Vous avez lu de l’anglais utile. Vous avez trouvé les âges et les langues.</p>
+
+      <ul class="checklist">
+        <li>I can read a short profile.</li>
+        <li>I can find an age.</li>
+        <li>I can find a language.</li>
+      </ul>
+
+      <p>You’re building confidence.</p>
+
+      <div class="nav">
+        <button type="button" class="btn-done" id="doneBtn" disabled>Done</button>
+        <a class="link-btn" id="nextLink" href="#" hidden>Carry on to the next activity</a>
+      </div>
+      <p class="feedback" id="doneMsg" role="status" aria-live="polite"></p>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ==================================================================
+   CONFIG — the single administrative edit point.
+   ================================================================== */
+var CONFIG = {
+  activityId: "W1L2_STEP5",
+
+  /* ADMIN: full URL of the next Moodle activity. Leave "" to hide the link.
+     Only http:// or https:// URLs are accepted. */
+  nextActivityUrl: "",
+
+  /* ADMIN: URL or Data URL of the official supplied Pazapa logo.
+     Leave "" to show the plain text wordmark. */
+  logoUrl: "",
+
+  /* ADMIN: Moodle origin for the completion message, e.g. "https://moodle.example.org".
+     Scheme + host only. Never use "*". Leave "" to log to console only. */
+  moodleOrigin: "",
+
+  /* French support visible on load. */
+  showFrench: true
+};
+
+/* ==================================================================
+   AUDIO_FILES — supplied recordings only.
+   Paste each recording as a Data URL: "data:audio/mpeg;base64,....".
+   A key left empty keeps its Listen button hidden — no placeholder,
+   no text-to-speech, no synthetic fallback, no external file paths.
+   Adult female British-English voices only. No autoplay.
+   ================================================================== */
+var AUDIO_FILES = {
+  /* R-01  "My name is Nadia. I am 35 years old. I speak Arabic and a little English." */
+  "R-01": "",
+  /* R-02  "My name is Sara. I am 28 years old. I speak French and Arabic." */
+  "R-02": "",
+  /* R-03  "Hello. I'm Amina. I'm 40 years old. I speak Arabic. I am learning English." */
+  "R-03": "",
+  /* R-04  "My name is Fatima. I am 30 years old. I speak Arabic." */
+  "R-04": "",
+  /* R-05  "My name is Mariam. I am 32 years old. I speak French and a little English." */
+  "R-05": "",
+  /* R-06  "Nadia. Thirty-five years old. Arabic." */
+  "R-06": ""
+};
+
+/* ==================================================================
+   AUDIO ENGINE
+   One cached Audio element per key, created at start-up with the Data URL
+   already attached; play() is called synchronously inside the click or
+   touch handler. One sound at a time via playToken.
+   ================================================================== */
+var players = {};
+var playToken = 0;
+var current = null;
+
+function buildPlayers(){
+  Object.keys(AUDIO_FILES).forEach(function(key){
+    var src = AUDIO_FILES[key];
+    if(!src) return;
+    var a = new Audio();
+    a.preload = "auto";
+    a.setAttribute("playsinline","");
+    a.playsInline = true;
+    a.src = src;
+    try{ a.load(); }catch(e){}
+    players[key] = a;
+  });
+}
+
+function stopCurrent(){
+  if(current){
+    try{ current.pause(); current.currentTime = 0; }catch(e){}
+    current = null;
+  }
+}
+
+function play(key){
+  playToken++;
+  stopCurrent();
+  var a = players[key];
+  if(!a) return;
+  current = a;
+  try{
+    a.currentTime = 0;
+    var p = a.play();
+    if(p && p.catch) p.catch(function(){});
+  }catch(e){}
+}
+
+function mp3Supported(){
+  try{
+    var probe = document.createElement("audio");
+    return !!(probe.canPlayType && probe.canPlayType("audio/mpeg"));
+  }catch(e){ return false; }
+}
+
+function initAudioButtons(){
+  var supported = mp3Supported();
+  var btns = document.querySelectorAll(".btn-audio");
+  Array.prototype.forEach.call(btns, function(b){
+    var key = b.getAttribute("data-audio");
+    var hasAudio = !!(AUDIO_FILES[key] && players[key]);
+    if(!hasAudio || !supported){
+      b.hidden = true;                 /* recording absent: button hidden, not replaced */
+      b.setAttribute("aria-hidden","true");
+      return;
+    }
+    b.hidden = false;
+    b.setAttribute("aria-label","Listen");
+    b.addEventListener("click", function(){ play(key); });
+  });
+}
+
+/* ==================================================================
+   FRENCH SUPPORT TOGGLE
+   ================================================================== */
+var frToggle = document.getElementById("frToggle");
+function setFrench(on){
+  document.body.classList.toggle("no-fr", !on);
+  frToggle.setAttribute("aria-pressed", on ? "true" : "false");
+  frToggle.textContent = on ? "Masquer le français" : "Afficher le français";
+}
+frToggle.addEventListener("click", function(){
+  setFrench(frToggle.getAttribute("aria-pressed") !== "true");
+});
+
+/* ==================================================================
+   QUESTIONS
+   Unlimited retry. Correct = muted lime (60% tint). Try again = muted red
+   (60% tint), used at the client's instruction. Feedback carries a word as
+   well as a colour, so nothing depends on colour alone.
+   ================================================================== */
+function escapeHtml(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+
+function revealNext(block){
+  var screen = block.parentNode;
+  var next = block.nextElementSibling;
+  while(next && next.className.indexOf("qblock") === -1) next = next.nextElementSibling;
+  if(next){
+    next.hidden = false;
+    var h = next.querySelector(".qtext");
+    if(h){ h.setAttribute("tabindex","-1"); h.focus(); }
+  }else{
+    var carry = screen.querySelector(".nav .btn-main");
+    if(carry){ carry.hidden = false; carry.focus(); }
+  }
+}
+
+function wireQuestions(){
+  var blocks = document.querySelectorAll(".qblock");
+  Array.prototype.forEach.call(blocks, function(block){
+    var fb = block.querySelector(".feedback");
+    var opts = block.querySelectorAll(".opt");
+    Array.prototype.forEach.call(opts, function(opt){
+      opt.addEventListener("click", function(){
+        if(block.getAttribute("data-solved") === "yes") return;
+        stopCurrent();
+        if(opt.hasAttribute("data-correct")){
+          block.setAttribute("data-solved","yes");
+          Array.prototype.forEach.call(opts, function(o){
+            o.classList.remove("is-retry");
+            if(o !== opt){
+              o.disabled = true;
+              o.setAttribute("aria-disabled","true");
+            }
+          });
+          opt.classList.add("is-correct");
+          fb.className = "feedback correct";
+          fb.innerHTML = '<span class="mark">Correct. </span>' +
+            escapeHtml(block.getAttribute("data-ok-en")) +
+            ' <span class="fr" lang="fr">' + escapeHtml(block.getAttribute("data-ok-fr")) + '</span>';
+          revealNext(block);
+        }else{
+          opt.classList.add("is-retry");
+          fb.className = "feedback retry";
+          fb.innerHTML = '<span class="mark">Try again. </span>' +
+            escapeHtml(block.getAttribute("data-try-en")) +
+            ' <span class="fr" lang="fr">' + escapeHtml(block.getAttribute("data-try-fr")) + '</span>';
+        }
+      });
+    });
+  });
+}
+
+/* ==================================================================
+   NAVIGATION — one screen at a time, forward only, no auto-advance,
+   no Previous button. Focus moves to the heading of the new screen.
+   ================================================================== */
+var order = ["s1","s2","s3","s4","s5","s6","s7"];
+var progressEl = document.getElementById("progress");
+var doneBtn = document.getElementById("doneBtn");
+
+function showScreen(id, moveFocus){
+  order.forEach(function(sid){
+    document.getElementById(sid).hidden = (sid !== id);
+  });
+  progressEl.textContent = "Part " + (order.indexOf(id) + 1) + " of " + order.length;
+  if(moveFocus){
+    var head = document.getElementById(id).querySelector("h1,h2");
+    if(head) head.focus();
+    try{ window.scrollTo(0,0); }catch(e){}
+  }
+  if(id === "s7") doneBtn.disabled = false;
+  stopCurrent();
+}
+
+Array.prototype.forEach.call(document.querySelectorAll("[data-next]"), function(b){
+  b.addEventListener("click", function(){ showScreen(b.getAttribute("data-next"), true); });
+});
+
+/* ==================================================================
+   COMPLETION — fires once, only when Done is pressed.
+   ================================================================== */
+var completionSent = false;
+function activityCompleted(){
+  if(completionSent) return;
+  completionSent = true;
+  console.log("W1L2 Step 5 completed");
+  var origin = String(CONFIG.moodleOrigin || "");
+  if(/^https?:\/\/[^\/\s*]+$/.test(origin)){
+    try{
+      window.parent.postMessage({ type:"activityCompleted", activity: CONFIG.activityId }, origin);
+    }catch(e){}
+  }
+}
+
+doneBtn.addEventListener("click", function(){
+  activityCompleted();
+  doneBtn.disabled = true;
+  var msg = document.getElementById("doneMsg");
+  msg.className = "feedback correct";
+  msg.innerHTML = 'Activity finished. <span class="fr" lang="fr">Activité terminée.</span>';
+  var link = document.getElementById("nextLink");
+  if(!link.hidden) link.focus();
+});
+
+/* ==================================================================
+   START-UP
+   ================================================================== */
+function applyConfig(){
+  var logoUrl = String(CONFIG.logoUrl || "");
+  if(/^https?:\/\/\S+$/.test(logoUrl) || /^data:image\//.test(logoUrl)){
+    var logo = document.getElementById("logo");
+    logo.src = logoUrl;
+    logo.hidden = false;
+    document.getElementById("wordmark").hidden = true;
+  }
+  if(/^https?:\/\/\S+$/.test(String(CONFIG.nextActivityUrl || ""))){
+    var link = document.getElementById("nextLink");
+    link.href = CONFIG.nextActivityUrl;
+    link.hidden = false;
+  }
+}
+
+setFrench(CONFIG.showFrench !== false);
+applyConfig();
+buildPlayers();
+initAudioButtons();
+wireQuestions();
+showScreen("s1", false);
+
+})();
+</script>
+</body>
+</html>
