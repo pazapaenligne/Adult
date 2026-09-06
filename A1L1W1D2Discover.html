@@ -14,8 +14,12 @@
      assessment, sentence building, extended reading, submission or
      lesson review anywhere in this file.
 
-     One self-contained file: no external libraries, fonts, images,
-     network requests, cookies, analytics or storage.
+     One self-contained file: no external libraries, fonts, images or
+     network requests, and no cookies, analytics or browser storage.
+     No personal information, voice recording or practice choice is
+     collected. When Done is pressed the activity reports completion to
+     Moodle or an LMS if one is present, so a completion status may be
+     recorded there.
      ==================================================================== -->
 
 <script>
@@ -45,9 +49,11 @@ var CONFIG = {
 
    RECORDING SCRIPT
    --------------------------------------------------------------------
-   instListen         Spoken instruction for Screen 3. Wording not yet
-                      confirmed by ear, so the button carries a general
-                      label that stays correct whatever it says.
+   instListen         Spoken instruction for Screen 3, played from the
+                      button labelled "Listen to the instructions". The
+                      recording is complete and in use; its label is
+                      deliberately general, so no written transcript is
+                      shown beside it.
    dlgNadia   Nadia:  "Hello. I'm Nadia. I'm 35 years old.
                        I speak Arabic and a little English."
    dlgMariam  Mariam: "Hi. I'm Mariam. I'm 28 years old.
@@ -87,7 +93,11 @@ var ASSETS = {
 /* ====================================================================
    FONTS — Brand Guidelines p.11
    Headings: Filson Soft Black. All-capital headings are not permitted.
-   Body: Open Sans. Both licensed: uncomment when the files are supplied.
+   Body: Open Sans. Both are licensed faces and are NOT embedded here.
+   Until the licensed files are supplied, the stacks below fall back to
+   fonts already on the device. Those fallbacks are substitutes, not the
+   official Pazapa faces. Uncomment the blocks below once the licensed
+   files are available; add no external font service.
    ==================================================================== */
 /*
 @font-face { font-family:"Filson Soft"; src:url("fonts/FilsonSoft-Black.woff2") format("woff2"); font-weight:900; font-display:swap; }
@@ -279,9 +289,9 @@ button{ font-family:inherit; font-size:1rem; }
       <div class="nav"><button type="button" class="btn go" data-go="scr3">Carry on</button></div>
     </section>
 
-    <!-- ================= 3 · WATCH AND LISTEN ================= -->
+    <!-- ================= 3 · LISTEN AND READ ================= -->
     <section class="screen" id="scr3" aria-labelledby="h3a" tabindex="-1" hidden>
-      <h1 id="h3a">Watch and listen</h1>
+      <h1 id="h3a">Listen and read</h1>
       <p>Listen to Nadia and Mariam. You can listen again as often as you like.</p>
       <p lang="fr">Écoutez Nadia et Mariam. Vous pouvez réécouter autant de fois que vous voulez.</p>
 
@@ -292,7 +302,7 @@ button{ font-family:inherit; font-size:1rem; }
 
       <div class="row" data-audio-row>
         <button type="button" class="btn go" id="playAll">Play</button>
-        <button type="button" class="btn" id="pauseAll">Pause</button>
+        <button type="button" class="btn" id="pauseAll" aria-label="Stop the conversation">Stop</button>
         <button type="button" class="btn" id="againAll">Play again</button>
       </div>
       <p class="msg help" data-audio-msg hidden aria-live="polite"></p>
@@ -328,7 +338,7 @@ button{ font-family:inherit; font-size:1rem; }
             <dl id="cardNadia">
               <dt data-kind="age">Age</dt><dd data-kind="age">35</dd>
               <dt data-kind="lang">Languages</dt><dd data-kind="lang">Arabic and a little English</dd>
-              <dt data-kind="learn">Learning</dt><dd data-kind="learn">She speaks a little English</dd>
+              <dt data-kind="learn">English</dt><dd data-kind="learn">She speaks a little English</dd>
             </dl>
           </div>
         </div>
@@ -338,7 +348,7 @@ button{ font-family:inherit; font-size:1rem; }
             <dl id="cardMariam">
               <dt data-kind="age">Age</dt><dd data-kind="age">28</dd>
               <dt data-kind="lang">Languages</dt><dd data-kind="lang">French and Arabic</dd>
-              <dt data-kind="learn">Learning</dt><dd data-kind="learn">She is learning English</dd>
+              <dt data-kind="learn">English</dt><dd data-kind="learn">She is learning English</dd>
             </dl>
           </div>
         </div>
@@ -396,8 +406,11 @@ button{ font-family:inherit; font-size:1rem; }
   </main>
 
   <p class="note" style="margin-top:30px;border-top:2px solid var(--grey);padding-top:14px">
-    Nadia, Mariam and all details here are fictional. Nothing you do is collected, stored or sent anywhere.
-    <br><span lang="fr">Nadia, Mariam et tous les détails sont fictifs. Rien n’est collecté, enregistré ni envoyé.</span>
+    Nadia, Mariam and all personal details shown here are fictional. This activity does not record your voice
+    or collect your personal information or practice choices. Moodle may record that you completed the activity.
+    <br><span lang="fr">Nadia, Mariam et toutes les informations personnelles présentées ici sont fictives.
+    Cette activité n’enregistre pas votre voix et ne collecte ni vos informations personnelles ni vos choix
+    d’entraînement. Moodle peut enregistrer que vous avez terminé l’activité.</span>
   </p>
 
 </div>
@@ -491,11 +504,14 @@ function stopAudio(){
   curEl=null; curBtn=null; curKey=null;
   clearSpeaking();
 }
-function pauseAudio(){
+/* Stop: ends playback outright and resets the conversation, so the
+   next Play starts again from Nadia. Nothing is left half-played. */
+function stopConversation(){
   token++; cancelSeq();
   if(curEl){ try{ curEl.pause(); }catch(e){} curEl.onended=null; curEl.onerror=null; }
   if(curBtn) curBtn.classList.remove("playing");
-  curBtn=null;
+  curEl=null; curBtn=null; curKey=null;
+  clearSpeaking();
 }
 function screenOf(el){
   var n=el;
@@ -729,9 +745,17 @@ function buildCards(){
    NOTICE THE INFORMATION — labels highlight the matching lines
    ==================================================================== */
 var LABELS = [
-  { kind:"age",   en:"Age",              fr:"L’âge" },
-  { kind:"lang",  en:"Languages",        fr:"Les langues" },
-  { kind:"learn", en:"Learning English", fr:"Apprendre l’anglais" }
+  { kind:"age",   en:"Age",       fr:"L’âge",
+    fbEn:"That’s useful English. You found age in both cards.",
+    fbFr:"Vous avez trouvé « L’âge » dans les deux fiches." },
+  { kind:"lang",  en:"Languages", fr:"Les langues",
+    fbEn:"That’s useful English. You found languages in both cards.",
+    fbFr:"Vous avez trouvé « Les langues » dans les deux fiches." },
+  /* Nadia is not learning English: she already speaks a little. This
+     category is simply the English information on each card. */
+  { kind:"learn", en:"English",   fr:"L’anglais",
+    fbEn:"That’s useful English. You found English information in both cards.",
+    fbFr:"Vous avez trouvé les informations sur l’anglais dans les deux fiches." }
 ];
 function buildLabels(){
   var host=document.getElementById("labels");
@@ -752,8 +776,7 @@ function buildLabels(){
       }
       if(msg){
         msg.className="msg good show";
-        msg.innerHTML="That’s useful English. You found "+l.en.toLowerCase()+" in both cards." +
-          '<span lang="fr">Vous avez trouvé « '+l.fr+' » dans les deux fiches.</span>';
+        msg.innerHTML=l.fbEn + '<span lang="fr">'+l.fbFr+'</span>';
       }
     });
     btns.push(b); host.appendChild(b);
@@ -915,17 +938,11 @@ function initNav(){
   var pa=document.getElementById("playAll"),
       pz=document.getElementById("pauseAll"),
       ag=document.getElementById("againAll");
-  var pausedAt=null;
-  if(pa) pa.addEventListener("click", function(){
-    if(pausedAt!==null){ var f=pausedAt; pausedAt=null; runDialogue(f); }
-    else runDialogue(0);
-  });
-  if(pz) pz.addEventListener("click", function(){
-    var on=document.querySelectorAll(".turn.speaking");
-    pausedAt = on.length ? parseInt(on[0].id.replace("turn-",""),10) : null;
-    pauseAudio();
-  });
-  if(ag) ag.addEventListener("click", function(){ pausedAt=null; runDialogue(0); });
+  /* Play always begins the whole conversation from Nadia, whether or
+     not Stop was used. Play again does the same. */
+  if(pa) pa.addEventListener("click", function(){ runDialogue(0); });
+  if(pz) pz.addEventListener("click", function(){ stopConversation(); });
+  if(ag) ag.addEventListener("click", function(){ runDialogue(0); });
 }
 
 function initDone(){
