@@ -187,6 +187,10 @@ p.pz-lead{ margin:0 0 6px; }
 .pz-model{ background:var(--pz-cyan-20); border-left:6px solid var(--pz-cyan); border-radius:10px; padding:14px 16px; margin:0 0 20px; }
 .pz-model-label{ font-size:.8rem; text-transform:none; font-weight:600; margin:0 0 6px; }
 .pz-model-text{ font-family:var(--head-font); font-weight:900; font-size:1.15rem; margin:0 0 10px; }
+.pz-script{ margin:10px 0 0; }
+.pz-script dt{ font-size:.8rem; font-weight:600; color:var(--pz-dark-80); margin:8px 0 0; }
+.pz-script dd{ margin:2px 0 0; font-family:var(--head-font); font-weight:900; font-size:1.05rem; }
+.pz-script dd.pz-answer{ padding-left:14px; border-left:4px solid var(--pz-cyan-60); }
 .pz-audio-warn{ margin:10px 0 0; font-size:.9rem; font-weight:600; background:var(--pz-yellow-20); border-left:6px solid var(--pz-yellow); border-radius:8px; padding:10px 12px; }
 .pz-audio-warn span{ display:block; font-weight:400; color:var(--pz-dark-80); }
 
@@ -320,7 +324,8 @@ button{ font-family:inherit; font-size:1rem; }
   </header>
 
   <div class="pz-progress">
-    <div class="pz-bar"><div class="pz-bar-fill" id="barFill"></div></div>
+    <div class="pz-bar" id="bar" role="progressbar" aria-label="Lesson progress"
+         aria-valuemin="1" aria-valuemax="8" aria-valuenow="1"><div class="pz-bar-fill" id="barFill"></div></div>
     <span class="pz-progress-text" id="barText" aria-live="polite">Screen 1 of 8</span>
   </div>
 
@@ -464,6 +469,14 @@ button{ font-family:inherit; font-size:1rem; }
         <div class="pz-audio-row" data-audio-row>
           <button type="button" class="pz-audio-btn" data-audio="conversation" aria-label="Listen to the conversation">Listen to the conversation</button>
         </div>
+        <!-- The written conversation. It stays whether or not the recording
+             is available, so this panel is never an empty box. -->
+        <dl class="pz-script">
+          <dt>Question</dt><dd>How old are you?</dd>
+          <dd class="pz-answer">I am 28 years old.</dd>
+          <dt>Question</dt><dd>What languages do you speak?</dd>
+          <dd class="pz-answer">I speak Arabic and a little English.</dd>
+        </dl>
         <p class="pz-audio-warn" data-audio-warn hidden>Audio is unavailable. You can continue with the written model.<span lang="fr">L’audio n’est pas disponible. Vous pouvez continuer avec le modèle écrit.</span></p>
       </div>
 
@@ -649,15 +662,31 @@ function reportAudioFailure(key){
   var btns = document.querySelectorAll('[data-audio="' + key + '"]');
   for(var i=0;i<btns.length;i++){
     btns[i].hidden = true;
-    var panel = closestPanel(btns[i]);
-    if(!panel) continue;
-    var row = panel.querySelector("[data-audio-row]");
-    if(row && row.querySelectorAll(".pz-audio-btn:not([hidden])").length === 0){
-      row.hidden = true;
-      var warn = panel.querySelector("[data-audio-warn]");
-      if(warn) warn.hidden = false;
-    }
+    tidyPanel(btns[i], true);      /* playback failed: say so */
   }
+}
+
+/* Hides the empty row and relabels the panel. Used for both cases, but
+   the notice differs:
+     notify=false  at start-up, when a recording was never supplied. A
+                   panel that already shows a written model says all the
+                   learner needs, so a notice would only add clutter.
+     notify=true   when playback fails after the learner pressed Play.
+                   Something visibly did not happen, so saying why is
+                   helpful even though the written model is there. */
+function tidyPanel(rowOrBtn, notify){
+  var panel = closestPanel(rowOrBtn);
+  if(!panel) return;
+  var row = panel.querySelector("[data-audio-row]");
+  if(row && row.querySelectorAll(".pz-audio-btn:not([hidden])").length === 0){
+    row.hidden = true;
+  }
+  var label = panel.querySelector(".pz-model-label");
+  if(label) label.innerHTML = 'Model / <span lang="fr">Modèle</span>';
+
+  var hasText = !!(panel.querySelector(".pz-model-text") || panel.querySelector(".pz-script"));
+  var warn = panel.querySelector("[data-audio-warn]");
+  if(warn) warn.hidden = notify ? false : hasText;
 }
 
 function closestPanel(el){
@@ -779,9 +808,10 @@ function initAudioButtons(){
 }
 
 /* ====================================================================
-   FEEDBACK — approved adult wording only. Try-again states use
-   brand red (#E6352B) at the client's instruction; the wording always
-   carries the meaning too, so colour is never the only signal.
+   FEEDBACK — approved adult wording only. Try-again states use the
+   official full Pazapa red (#E6352B) as the edge over the 20% tint.
+   The wording always carries the meaning too, so colour is never the
+   only signal.
    ==================================================================== */
 var GOOD = [
   { en:"Good choice.", fr:"Bon choix." },
@@ -1147,8 +1177,10 @@ function showScreen(n){
   el.hidden = false;
   el.classList.add("is-active");
 
+  var bar  = document.getElementById("bar");
   var fill = document.getElementById("barFill");
   var text = document.getElementById("barText");
+  if(bar) bar.setAttribute("aria-valuenow", String(current));
   if(fill) fill.style.width = Math.round((current / TOTAL) * 100) + "%";
   if(text) text.textContent = "Screen " + current + " of " + TOTAL;
 
@@ -1191,19 +1223,99 @@ function initNav(){
    ==================================================================== */
 var completionSent = false;
 
-function notifyMoodleApi(){
+/* Walks the frame chain for an LMS API. Cross-origin access throws,
+   which is expected inside Moodle, so every read is guarded and the
+   walk is hop-limited. */
+function findLmsApi(name){
+  var win = window, hops = 0;
+  try{ if(win[name]) return win[name]; }catch(e){ return null; }
+  while(hops < 10){
+    var up = null;
+    try{ up = win.parent; }catch(e){ break; }
+    if(!up || up === win) break;
+    win = up; hops++;
+    try{ if(win[name]) return win[name]; }catch(e){ break; }
+  }
+  try{ if(window.opener && window.opener[name]) return window.opener[name]; }catch(e){}
+  return null;
+}
+/* Only an explicit true or "true" counts as success. undefined, null,
+   "" and any other value are treated as failure, so completion is never
+   reported on an ambiguous response. */
+function lmsSucceeded(value){
+  return value === true || String(value).toLowerCase() === "true";
+}
+
+/* SCORM 1.2 — initialise first, then set, then commit.
+   Calling SetValue before Initialize throws in some LMS wrappers, and
+   that throw would land in the outer catch with initialisation never
+   attempted. Initialising first, inside its own try, avoids that: an
+   already-open session simply raises there and is ignored. */
+function completeScorm12(){
+  var api = findLmsApi("API");
+  if(!api) return false;
+
   try{
-    var p = window.parent;
-    if(!p || p === window) return false;
-    var M = p.M;                                   /* throws if cross-origin */
-    if(M && M.cfg && typeof M.cfg.wwwroot === "string"){
-      if(M.core && M.core.event && typeof M.core.event.notifyFilterContentUpdated === "function"){
-        /* Present and reachable. Nothing further is asserted. */
-      }
-      return true;
+    if(typeof api.LMSSetValue !== "function" ||
+       typeof api.LMSCommit !== "function"){
+      return false;
     }
-  }catch(e){ /* cross-origin frame: expected, not an error */ }
-  return false;
+
+    if(typeof api.LMSInitialize === "function"){
+      try{
+        api.LMSInitialize("");
+      }catch(initialiseError){
+        /* The session may already be initialised. Carry on. */
+      }
+    }
+
+    var setResult = api.LMSSetValue("cmi.core.lesson_status", "completed");
+    if(!lmsSucceeded(setResult)) return false;
+
+    var commitResult = api.LMSCommit("");
+    if(!lmsSucceeded(commitResult)) return false;
+
+    console.log("SCORM 1.2 completion sent.");
+    return true;
+  }catch(error){
+    console.error("SCORM 1.2 completion failed.");
+    return false;
+  }
+}
+
+/* SCORM 2004 — same order. No score is set, cmi.success_status is left
+   alone because this step is not scored, and the session is never
+   terminated. */
+function completeScorm2004(){
+  var api = findLmsApi("API_1484_11");
+  if(!api) return false;
+
+  try{
+    if(typeof api.SetValue !== "function" ||
+       typeof api.Commit !== "function"){
+      return false;
+    }
+
+    if(typeof api.Initialize === "function"){
+      try{
+        api.Initialize("");
+      }catch(initialiseError){
+        /* The session may already be initialised. Carry on. */
+      }
+    }
+
+    var setResult = api.SetValue("cmi.completion_status", "completed");
+    if(!lmsSucceeded(setResult)) return false;
+
+    var commitResult = api.Commit("");
+    if(!lmsSucceeded(commitResult)) return false;
+
+    console.log("SCORM 2004 completion sent.");
+    return true;
+  }catch(error){
+    console.error("SCORM 2004 completion failed.");
+    return false;
+  }
 }
 
 function notifyParentFrame(){
@@ -1224,7 +1336,11 @@ function notifyParentFrame(){
 function activityCompleted(){
   if(completionSent) return;
   completionSent = true;
-  notifyMoodleApi();
+  /* Every route is attempted; none is required. The learner is told
+     only that the activity is complete, never that Moodle recorded it,
+     because no channel here returns a trustworthy acknowledgement. */
+  completeScorm12();
+  completeScorm2004();
   notifyParentFrame();
   console.log("W1L2 Step 4 completed");
 }
