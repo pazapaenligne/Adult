@@ -16,33 +16,48 @@
 var CONFIG = {
 
   /* Moodle parent origin for the completion postMessage.
-     Must be an exact "https://host" or "http://host" value.
-     NEVER use "*" as the destination origin. */
-  moodleOrigin: "",                 /* e.g. "https://moodle.pazapa.org"  <-- FILL BEFORE DEPLOYMENT */
+     Must be an exact "https://host" or "http://host" value. Paths, query
+     strings, wildcards and credentials are rejected by isValidOrigin().
+     NEVER use "*" as the destination origin.
+
+     CURRENTLY EMPTY, WHICH IS A VALID SETTING, NOT A FAULT. While it is empty
+     the postMessage completion channel is switched off: no message is sent to
+     any parent window. SCORM completion is unaffected and still runs whenever
+     the activity is deployed inside a proper SCORM package, so an LMS that
+     provides API_1484_11 or API will still be told the step is complete.
+     Fill this in only if a Moodle page needs the postMessage channel too. */
+  moodleOrigin: "",                 /* e.g. "https://moodle.pazapa.org"  <-- ADMINISTRATOR SETTING */
 
   /* Absolute URL of the next activity (W1L2 Step 3).
-     Leave empty to hide the "Next activity" link on the final screen. */
-  nextActivityUrl: "",              /* <-- FILL BEFORE DEPLOYMENT */
+     CURRENTLY EMPTY, WHICH IS A VALID SETTING, NOT A FAULT. While it is empty
+     the "Next activity" link stays hidden on the final screen and Moodle
+     handles navigation on its own, which is the normal arrangement inside a
+     SCORM package. Fill this in only if the activity must link on by itself. */
+  nextActivityUrl: "",              /* <-- ADMINISTRATOR SETTING */
 
   /* Show the French support lines by default.
      Learners can still toggle them with the "Français" button. */
   showFrench: true,
 
   /* Any key named here has its play button hidden and its written model shown
-     instead. A recording is only removed from this list once its spoken wording
-     has been heard and confirmed against the model on its screen.
+     in its place, so the screen still works without the recording.
 
-     ALL SIX ARE LISTED because no listening or transcription check has been
-     carried out. The files are technically sound — see AUDIO_FILES below — but
-     technical soundness is not evidence of what is said, and this is a
-     listening assessment. Remove a key from this list only after hearing it. */
+     FIVE recordings are active: A01_age_35, A02_arabic, A03_fr_en,
+     A04_profile and A07_how_old. Their Listen buttons are visible and each
+     plays its own embedded clip.
+
+     ONE recording is pending confirmation: A05_two_women. Its spoken wording
+     has not been checked by ear against the m-two transcript on Screen 6, and
+     the waveform suggests the transcript may be missing a greeting or a name
+     for each woman — see the note against that key below. Its Listen button is
+     hidden and the written model is shown instead. Screen 6 remains fully
+     answerable from the written model, so the activity can be completed.
+
+     TO RELEASE IT: play the recording, confirm it says exactly what m-two
+     says, correct m-two first if it does not, then delete the key from this
+     array. That single edit is all that is needed. */
   audioPendingConfirmation: [
-    "A01_age_35",
-    "A02_arabic",
-    "A03_fr_en",
-    "A04_profile",
-    "A05_two_women",
-    "A07_how_old"
+    "A05_two_women"
   ]
 };
 
@@ -53,21 +68,23 @@ var CONFIG = {
 
    EMBEDDED — bytes taken from the supplied files.
 
-   WHAT WAS CHECKED. File integrity only. Each recording was decoded back out
-   of this file and compared with the original upload: MD5 match, byte length,
-   MIME type, and a re-probe of the decoded stream to confirm it plays and its
-   duration matches. All six pass.
+   STATUS. Five of the six recordings are active: A01_age_35, A02_arabic,
+   A03_fr_en, A04_profile and A07_how_old. Their Listen buttons are visible and
+   play their own embedded clips. A05_two_women is listed in
+   CONFIG.audioPendingConfirmation and is NOT active: its Listen button is
+   hidden and the m-two written model is shown on Screen 6 instead.
 
-   WHAT WAS NOT CHECKED. The spoken words. No listening check and no speech
-   transcription has been performed on any of these recordings. The burst
-   counts noted below come from energy detection on the waveform, which shows
-   how many stretches of speech a file contains but not what is said in them.
+   FILE INTEGRITY. Each recording was decoded back out of this file and
+   compared with the original upload: MD5 match, byte length, MIME type, and a
+   re-probe of the decoded stream to confirm it plays and its duration matches.
+   All six pass. The MD5 values below are the originals and are unchanged.
 
-   CONSEQUENCE. Every key is listed in CONFIG.audioPendingConfirmation above,
-   so no Listen button is shown and the written model is displayed instead.
-   The activity is fully completable this way. To activate a recording, listen
-   to it, confirm it matches the model on its screen, then remove its key from
-   that list. Do not remove a key on the strength of the checks above.
+   WORDING. The wording of the five active recordings is confirmed by Pazapa
+   against the model on each screen. The wording of A05_two_women is NOT
+   confirmed, which is why it is held back. The durations and speech-burst
+   figures below are measurements taken from the waveform; they are reference
+   data for anyone re-checking a clip, and are not evidence of what is said in
+   it, so no recording is released or held back on their strength alone.
 
      A01_age_35      <- iam35_mp3.mp3           2.40 s  md5 b9c7e01d...
                         1 speech burst, 2.08 s. Expected: "I am 35 years old."
@@ -81,16 +98,36 @@ var CONFIG = {
                         "Hello. I'm Sara. I'm 28 years old. I speak Arabic.
                          I am learning English."
      A05_two_women   <- nadiaamina_mp3.mp3    10.34 s  md5 d2fbc826...
-                        6 speech bursts in two groups, split by the longest
-                        internal pause (0.84 s at 3.76-4.60 s), which is
-                        consistent with a change of speaker. Expected:
-                        Amina "I'm 40 years old. I speak Arabic." then
-                        Nadia "I'm 32 years old. I speak French and a little
-                        English." NOTE: 6 bursts against 4 expected sentences,
-                        so each woman may open with a greeting or her name.
-                        The transcript on screen may therefore be short by two
-                        lines. Confirm by listening before activating this key,
-                        keeping Amina's and Nadia's lines clearly separate.
+                        7 speech bursts in two groups, split by the longest
+                        internal pause (0.66 s at 3.94-4.60 s), which is
+                        consistent with a change of speaker:
+                          group 1  0.12-0.72, 1.22-2.44, 2.82-3.94   (3 bursts)
+                          group 2  4.60-5.24, 5.56-7.02, 7.48-8.48,
+                                   8.68-9.82                        (4 bursts)
+                        Expected: Amina "I'm 40 years old. I speak Arabic."
+                        then Nadia "I'm 32 years old. I speak French and a
+                        little English."
+                        HELD BACK — pending confirmation by ear. Listed in
+                        CONFIG.audioPendingConfirmation, so its Listen button
+                        is hidden and m-two is shown on Screen 6 instead.
+                        REASON — m-two may be incomplete. There are 7 bursts
+                        against the 4 sentences written in m-two, and each of
+                        the two groups opens with a short burst of about 0.6 s,
+                        which is the length of a greeting or a name. If either
+                        woman opens with "Hello" or with her own name, those
+                        words are missing from m-two and should be added to her
+                        line, keeping Amina's and Nadia's lines separate. The
+                        transcript has NOT been altered here: the waveform
+                        shows how many stretches of speech there are, not what
+                        is said in them, and inventing the missing words is
+                        worse than leaving the line short. The answer key
+                        ("Who speaks French?" -> Nadia) is unaffected either
+                        way, and Screen 6 is answerable from the written model
+                        while the recording is held back.
+                        Level note: this clip sits about 4.5 dB hotter than the
+                        other five (RMS -18.6 dBFS, peak -0.6 dBFS, against
+                        roughly -23 dBFS RMS elsewhere). Not corrected here,
+                        because the supplied bytes must be preserved.
      A07_how_old     <- howoldareyou_mp3__2_.mp3  1.44 s  md5 aba2711d...
                         1 speech burst, 1.04 s. Expected: "How old are you?"
 
@@ -865,7 +902,15 @@ body.no-fr .fr{ display:none; }
        §22 stopAudio() runs before every playback, so fast repeat taps
            cannot stack two players
      ====================================================================== */
-  var currentAudio = null;
+  /* ONE persistent <audio> element for the whole activity.
+     iOS and iPadOS Safari unlock a media element only through the gesture that
+     first played it. A fresh "new Audio()" per press is therefore silent from
+     the second press onwards, and silent again after every screen change. One
+     element, created inside the first real tap and reused for every clip on
+     every screen, is the only pattern that plays reliably on iOS. */
+  var audioEl      = null;
+  var playToken    = 0;
+  var activeSrc    = null;
   var canPlayMp3   = false;
 
   (function detectMp3(){
@@ -891,16 +936,50 @@ body.no-fr .fr{ display:none; }
     for(var i=0;i<list.length;i++){ list[i].classList.remove("is-playing"); }
   }
 
-  function releaseAudio(a){
-    if(!a) return;
-    try{ a.pause(); a.currentTime = 0; }catch(e){}
-    if(a.parentNode){ try{ a.parentNode.removeChild(a); }catch(e){} }
+  /* The single element is created lazily, inside the learner's first tap, so
+     the gesture that creates it is also the gesture that plays it. It is never
+     removed, never replaced, and never detached from the document. */
+  function getAudioEl(){
+    if(audioEl) return audioEl;
+
+    audioEl = document.createElement("audio");
+    audioEl.preload = "auto";
+    audioEl.setAttribute("playsinline", "");
+    audioEl.playsInline = true;
+    /* Older Android WebViews refuse to play a detached media element, so the
+       element stays attached off-screen for the life of the activity. */
+    audioEl.style.display = "none";
+    document.body.appendChild(audioEl);
+
+    /* Registered once, on the one element. Swapping the src on a media element
+       can emit a trailing event for the source that was just abandoned, so both
+       handlers check that the element is still holding the source the current
+       press asked for. A late event belonging to a replaced clip is discarded
+       and cannot clear the state of the clip now playing. */
+    audioEl.addEventListener("ended", function(){
+      if(audioEl.getAttribute("src") !== activeSrc) return;
+      clearPlayingUI();
+    });
+
+    audioEl.addEventListener("error", function(){
+      if(audioEl.getAttribute("src") !== activeSrc) return;
+      console.error("Audio loading error:",
+                    audioEl.error ? audioEl.error.code : "unknown");
+      clearPlayingUI();
+    });
+
+    return audioEl;
   }
 
+  /* Standard §10 and §22: one sound at a time. Because there is only ever one
+     element, pausing it is enough to stop whatever was playing. The token is
+     bumped so a play() promise still pending from an earlier press cannot
+     reject later and wipe the state of the press that replaced it. */
   function stopAudio(){
-    if(currentAudio){
-      releaseAudio(currentAudio);
-      currentAudio = null;
+    playToken++;
+    activeSrc = null;
+    if(audioEl){
+      try{ audioEl.pause(); audioEl.currentTime = 0; }catch(e){}
     }
     if(window.speechSynthesis){
       try{ window.speechSynthesis.cancel(); }catch(e){}
@@ -911,51 +990,31 @@ body.no-fr .fr{ display:none; }
   function playAudio(src, btn){
     if(!src){ console.error("Missing audio source."); return; }
 
-    stopAudio();
+    var el    = getAudioEl();
+    var token = ++playToken;
 
-    var audio = new Audio();
-    audio.preload = "auto";
-    audio.setAttribute("playsinline", "");
-    audio.playsInline = true;
-    audio.src = src;
+    /* Starting anything stops whatever was running and clears its button. */
+    try{ el.pause(); }catch(e){}
+    clearPlayingUI();
 
-    /* Older Android WebViews refuse to play a detached media element, so the
-       element is attached off-screen for the duration of playback. */
-    audio.style.display = "none";
-    document.body.appendChild(audio);
+    /* Standard §14: pressing the same button again restarts that clip. The
+       source is only reassigned when it actually changes, so a replay rewinds
+       the clip already loaded instead of reloading it. */
+    if(el.getAttribute("src") !== src){
+      el.setAttribute("src", src);
+    }
+    activeSrc = src;
+    try{ el.currentTime = 0; }catch(e){}
 
-    currentAudio = audio;
     if(btn && btn.classList.contains("btn-listen")){ btn.classList.add("is-playing"); }
 
-    /* Ending, failing to load and a rejected play() can all fire for the same
-       element, so cleanup is guarded to run once. The button state is only
-       touched when this element is still the active one, so a late fault from
-       an already-replaced clip cannot reset the clip now playing. */
-    var finished = false;
-    function finish(){
-      if(finished) return;
-      finished = true;
-      var wasCurrent = (currentAudio === audio);
-      releaseAudio(audio);
-      if(wasCurrent){
-        currentAudio = null;
-        clearPlayingUI();
-      }
-    }
-
-    audio.addEventListener("ended", finish);
-
-    audio.addEventListener("error", function(){
-      console.error("Audio loading error:", audio.error ? audio.error.code : "unknown");
-      finish();
-    });
-
     /* play() is called synchronously inside the learner's gesture. */
-    var promise = audio.play();
+    var promise = el.play();
     if(promise && typeof promise.catch === "function"){
       promise.catch(function(error){
+        if(token !== playToken) return;   /* superseded by a later press */
         console.error("Audio playback failed:", error);
-        finish();
+        clearPlayingUI();
       });
     }
   }
@@ -967,12 +1026,14 @@ body.no-fr .fr{ display:none; }
     var players = document.querySelectorAll("[data-play]");
     for(var i=0;i<players.length;i++){
       var btn = players[i];
-      if(!keyIsUsable(btn.getAttribute("data-play"))){ btn.hidden = true; }
+      /* Set both ways, so clearing a key in audioPendingConfirmation is enough
+         on its own to bring that Listen button back. */
+      btn.hidden = !keyIsUsable(btn.getAttribute("data-play"));
     }
     var notices = document.querySelectorAll("[data-audio-missing]");
     for(var n=0;n<notices.length;n++){
       var note = notices[n];
-      if(keyIsUsable(note.getAttribute("data-audio-missing"))) continue;
+      if(keyIsUsable(note.getAttribute("data-audio-missing"))){ note.hidden = true; continue; }
       note.hidden = false;
       var screen = note.closest(".screen");
       if(!screen) continue;
@@ -1271,20 +1332,26 @@ body.no-fr .fr{ display:none; }
     }
   }
 
+  /* Returns true when at least one reporting channel accepted the result.
+     The completionSent latch is only closed on success, so a run in which
+     every channel failed or was unavailable can be retried by pressing Done
+     again. Once a channel has succeeded the latch stays closed and no further
+     press can send a duplicate. */
   function activityCompleted(){
-    if(completionSent) return;
-    completionSent = true;
+    if(completionSent) return true;
 
-    /* Local completion always happens, whether or not an LMS is listening. */
+    /* Local completion always happens, whether or not an LMS is listening.
+       The learner sees the step finish either way. */
     console.log("W1L2 Step 2 completed");
 
     var s2004 = reportScorm2004();
     var s12   = s2004 ? false : reportScorm12();
 
-    /* Never "*" and never an empty destination. An absent or invalid origin
-       simply means no message is posted; the activity still completes. */
-    var posted = false;
-    if(isValidOrigin(CONFIG.moodleOrigin)){
+    /* Never "*" and never an empty destination. An empty or invalid origin
+       switches this channel off; it is not an error and not a failed attempt. */
+    var originSet = isValidOrigin(CONFIG.moodleOrigin);
+    var posted    = false;
+    if(originSet){
       try{
         window.parent.postMessage(
           { type: "pazapa-activity-complete",
@@ -1296,17 +1363,34 @@ body.no-fr .fr{ display:none; }
       }catch(e){ console.error("Completion message failed:", e); }
     }
 
-    /* Reported, not confirmed: none of these channels tells us the LMS stored
-       anything, so nothing here claims that Moodle saved the result. */
+    var reported = !!(s2004 || s12 || posted);
+    if(reported){ completionSent = true; }
+
+    /* Reported, not confirmed. A true below means the channel accepted the
+       call, not that Moodle or any other LMS stored the result. Nothing here
+       claims completion was saved. */
     console.log("Completion reported to — SCORM 2004:", s2004,
-                "| SCORM 1.2:", s12, "| Moodle message:", posted);
+                "| SCORM 1.2:", s12,
+                "| postMessage:", originSet ? posted : "disabled (moodleOrigin empty)");
+    if(!reported){
+      console.warn("No completion channel reported. The step is finished for " +
+                   "the learner. Pressing Done again will retry.");
+    }
+    return reported;
   }
 
   doneBtn.addEventListener("click", function(){
     if(doneBtn.disabled) return;
     stopAudio();
-    activityCompleted();
-    doneBtn.disabled = true;
+
+    var reported = activityCompleted();
+
+    /* The learner-facing state is the same either way: the step is finished.
+       The button is only locked once a channel has accepted the result, so if
+       nothing reported it stays pressable and a further press retries. That
+       retry cannot produce a duplicate, because the latch inside
+       activityCompleted() closes as soon as one channel succeeds. */
+    doneBtn.disabled = reported;
     doneBtn.textContent = "Done \u2713";
     srLive.textContent = "This step is finished.";
 
