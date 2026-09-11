@@ -298,7 +298,7 @@ Pass 11 (superseded — history only) — all twelve recordings released on admi
     iPad, the secure AI backend, feedbackEndpoint and the production Moodle
     origin all remain outstanding.
 
-Pass 12 (this delivery) — endpoint validation hardened. Production values
+Pass 12 (superseded — history only) — endpoint validation hardened. Production values
   requested but NOT supplied, so nothing was configured.
   · CONFIGURATION NOT DONE. The production origin and endpoint arrived as
     unfilled placeholder text, so moodleOrigin and feedbackEndpoint remain
@@ -320,6 +320,33 @@ Pass 12 (this delivery) — endpoint validation hardened. Production values
     PRONUNCIATION_FEEDBACK_SETUP.md; no key or key name belongs in this file.
   · No payload, phrase, chunk, translation or layout was touched.
 
+Pass 13 (this delivery) — Record and compare added, on instruction (option B).
+  · New optional block on every sentence screen: Record, then Play my voice,
+    Listen to the model, Record again, Delete, Carry on, and Skip recording.
+    The learner records herself and compares. No scoring, no accent grading,
+    no AI — that was option C and was not chosen.
+  · Works with NO backend. It is gated on MediaRecorder and a secure context,
+    not on feedbackEndpoint, so it is usable in Moodle the moment this file is
+    uploaded, unlike the AI speaking panel.
+  · The audio engine was generalised: playSource() now drives the one
+    persistent <audio> element for both model clips and the learner's own
+    recording, sharing the generation token and one button-refresh pass, so
+    the two can never sound together.
+  · PRIVACY WORDING CHANGED, and this needs your attention. The speaking
+    panel's notice still correctly says that feature saves no recognised words
+    and no audio recording. The new recording panel has its own, different
+    notice, because it would be false to reuse the old one: it says the
+    recording stays in this browser, is not sent anywhere, and is deleted when
+    the learner leaves the sentence. That is what the code does.
+  · MediaRecorder and Blob are now present, which earlier passes forbade. The
+    prohibition that still holds, and is tested, is that the audio never
+    leaves the browser.
+  · Verified with a real MediaRecorder over localhost against a fake audio
+    device: 72 checks, including permission denial, blob-URL revocation after
+    Delete and after Record again, microphone release, rapid start/stop/start,
+    and completion with the microphone refused.
+  · No payload, phrase, chunk or translation was touched.
+
 DELIBERATE DEVIATIONS FROM PROGRAMME DEFAULTS (each brief-mandated)
 --------------------------------------------------------------------------------
 1. EXTERNAL NETWORK CALL. The programme standard is zero external network
@@ -330,7 +357,20 @@ DELIBERATE DEVIATIONS FROM PROGRAMME DEFAULTS (each brief-mandated)
    Nothing about completion depends on the network.
 2. MICROPHONE ACCESS. Requested only after the learner presses "Practise
    speaking". Never on load.
-3. SPEECH RECOGNITION — WHAT THIS FILE CAN AND CANNOT PROMISE.
+3a. RECORD AND COMPARE (Pass 13). This is the one feature that does hold a
+   recording. getUserMedia runs only on a press of Record, never on load. The
+   audio is a Blob in memory reached through an object URL; the URL is revoked
+   the moment the recording is discarded, and it is discarded on Delete,
+   Record again, Carry on, Skip, a screen change and page close. The
+   microphone track is stopped as soon as recording ends. It is never
+   uploaded, never sent to the feedback endpoint, and never written to
+   storage. Playback runs through the same single <audio> element as the model
+   clips, so the learner's voice and the model can never sound at once. There
+   is no scoring and no accent judgement: the learner hears the difference
+   herself. getUserMedia needs a secure context, so served from Moodle over
+   https it works, and opened from a local file the whole block is hidden with
+   a plain explanation.
+3b. SPEECH RECOGNITION — WHAT THIS FILE CAN AND CANNOT PROMISE.
    What this file does:
      · it does not use MediaRecorder;
      · it does not create a Blob, an ObjectURL or an audio file;
@@ -638,6 +678,14 @@ button[disabled]:hover{background:#FFFFFF;}
 .pz-btn-done:hover{background:var(--pz-lime-80);}
 .pz-btn-quiet{background:#FFFFFF;border-color:var(--pz-dark);font-weight:400;}
 
+/* ---------- optional record-and-compare panel ---------- */
+.pz-record{
+  border:2px dashed var(--pz-lime-80);
+  border-radius:var(--pz-radius);
+  padding:14px;margin:18px 0 0;background:var(--pz-lime-20);
+}
+.pz-rec-status{margin:12px 0 0;}
+
 /* ---------- optional speaking panel ---------- */
 .pz-speak{
   border:2px dashed var(--pz-blue-60);
@@ -757,6 +805,7 @@ noscript p{
         not save your recognised words or an audio recording.</p>
         <p class="pz-fr" lang="fr">La pratique orale est facultative. Cette
         activité n’enregistre ni vos mots reconnus ni un enregistrement audio.</p>
+        <p class="pz-label" id="pz-record-availability"></p>
         <p class="pz-label" id="pz-speak-availability"></p>
       </div>
 
@@ -1101,20 +1150,26 @@ function stopAudio(){
   refreshAudioButtons();
 }
 
-function playAudio(key, btn){
-  if (!audioEl || !isValidAudio(key)) return;
-  if (audioBusyKey === key){ stopAudio(); return; }   /* rapid re-tap = stop */
+/* Plays any source through the one persistent element. busyKey identifies what
+   is playing: an AUDIO_FILES key for a model clip, or "rec:<panel id>" for the
+   learner's own recording. Both routes share the element, the generation token
+   and the button refresh, so a model clip and a recording can never sound at
+   the same time. */
+function playSource(src, busyKey, btn){
+  if (!audioEl || !src) return;
+  if (audioBusyKey === busyKey){ stopAudio(); return; }   /* rapid re-tap = stop */
   stopAudio();
-  stopRecognition();                                   /* one source at a time */
+  stopRecognition();
+  stopActiveRecorder();                                   /* one source at a time */
   var token = ++audioToken;
-  audioBusyKey = key;
+  audioBusyKey = busyKey;
   refreshAudioButtons();
   try {
     /* Assign src only when the clip actually changes, so replaying the same
        recording rewinds rather than reloading. Fewer load cycles inside a
        tap gesture is the safer pattern on iOS and iPadOS. */
-    if (audioEl.getAttribute("src") !== AUDIO_FILES[key]){
-      audioEl.src = AUDIO_FILES[key];
+    if (audioEl.getAttribute("src") !== src){
+      audioEl.src = src;
     } else {
       try { if (audioEl.readyState > 0) audioEl.currentTime = 0; } catch(e2){}
     }
@@ -1134,6 +1189,11 @@ function playAudio(key, btn){
   }
 }
 
+function playAudio(key, btn){
+  if (!isValidAudio(key)) return;
+  playSource(AUDIO_FILES[key], key, btn);
+}
+
 if (audioEl){
   audioEl.addEventListener("ended", function(){ audioBusyKey = null; refreshAudioButtons(); });
   audioEl.addEventListener("error", function(){
@@ -1145,11 +1205,14 @@ if (audioEl){
   });
 }
 
+/* Covers model-clip buttons and own-recording playback buttons in one pass, so
+   the two can never disagree about what is sounding. */
 function refreshAudioButtons(){
-  var btns = document.querySelectorAll("[data-audio-key]");
+  var btns = document.querySelectorAll("[data-audio-key],[data-rec-key]");
   for (var i = 0; i < btns.length; i++){
     var b = btns[i];
-    var playing = (b.getAttribute("data-audio-key") === audioBusyKey);
+    var k = b.getAttribute("data-audio-key") || b.getAttribute("data-rec-key");
+    var playing = (k === audioBusyKey);
     b.setAttribute("aria-pressed", playing ? "true" : "false");
     b.textContent = playing ? b.getAttribute("data-label-stop") : b.getAttribute("data-label-play");
   }
@@ -1358,6 +1421,322 @@ function focusIsApproved(focus, index){
 }
 
 /* ============================================================================
+   RECORD AND COMPARE — optional, added in Pass 13 on instruction.
+
+   The learner records herself saying the sentence, plays it back, and compares
+   it with the model. There is no scoring, no accent judgement and no AI: the
+   value is hearing yourself next to the model.
+
+   WHAT HAPPENS TO THE AUDIO. This is the one part of the activity that does
+   hold a recording, so the handling is deliberate:
+     · getUserMedia is called only when the learner presses Record, never on
+       load;
+     · the audio is kept as a Blob in memory and reached through an object URL,
+       which is revoked as soon as the recording is discarded;
+     · it is never uploaded, never sent to the feedback endpoint, never written
+       to storage of any kind;
+     · it is destroyed on Delete, Record again, Carry on, Skip, a screen
+       change, and page close;
+     · the microphone track is stopped as soon as recording ends, so the
+       browser's in-use indicator clears.
+   The learner-facing notice says exactly this and promises nothing more.
+
+   getUserMedia needs a secure context. Served from Moodle over https it is
+   available; opened from a local file it is not, and the whole block is then
+   hidden with a plain explanation rather than a broken button.
+   ========================================================================= */
+
+var RECORD_MAX_MS = 12000;   /* silent safety cap, not a learner-facing timer */
+
+var recGen = 0;          /* generation token: a stale callback must do nothing */
+var recorder = null;
+var recPanel = null;
+var recStream = null;
+
+function recordingSupported(){
+  return !!(window.isSecureContext
+         && navigator.mediaDevices
+         && typeof navigator.mediaDevices.getUserMedia === "function"
+         && typeof window.MediaRecorder !== "undefined");
+}
+
+/* Safari records audio/mp4; Chromium prefers Opus in WebM. Ask for what the
+   browser actually says it supports rather than assuming. */
+function recMimeType(){
+  var candidates = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm",
+                    "audio/ogg;codecs=opus"];
+  for (var i = 0; i < candidates.length; i++){
+    try {
+      if (window.MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+    } catch(e){}
+  }
+  return "";
+}
+
+function releaseStream(stream){
+  if (!stream) return;
+  try {
+    var tracks = stream.getTracks();
+    for (var i = 0; i < tracks.length; i++){ try { tracks[i].stop(); } catch(e){} }
+  } catch(e){}
+}
+
+/* Stops whatever is recording. The stream is NOT released here: the recorder's
+   own onstop releases the stream it captured, so a stale stop can never pull
+   the microphone out from under a newer recording. */
+function stopActiveRecorder(){
+  if (!recorder) return;
+  try { if (recorder.state !== "inactive") recorder.stop(); } catch(e){}
+}
+
+function recKeyFor(panel){ return "rec:" + panel.id; }
+
+/* Throws the recording away and revokes its URL. */
+function clearRecording(panel){
+  if (!panel) return;
+  if (audioBusyKey === recKeyFor(panel)) stopAudio();
+  if (panel.pzRecUrl){
+    try { URL.revokeObjectURL(panel.pzRecUrl); } catch(e){}
+    panel.pzRecUrl = null;
+  }
+  var after = panel.querySelector('[data-role="rec-after"]');
+  if (after) after.hidden = true;
+  refreshAudioButtons();
+}
+
+function clearAllRecordings(){
+  var panels = document.querySelectorAll(".pz-record");
+  for (var i = 0; i < panels.length; i++){
+    clearRecording(panels[i]);
+    if (panels[i].pzRecSkipped) continue;   /* leave the skipped note in place */
+    var s = panels[i].querySelector(".pz-rec-status");
+    if (s) s.textContent = "";
+    setRecBusy(panels[i], false);
+  }
+}
+
+function recPart(panel, role){ return panel.querySelector('[data-role="' + role + '"]'); }
+
+function setRecBusy(panel, busy){
+  var b = recPart(panel, "rec-start");
+  if (!b) return;
+  b.disabled = false;
+  b.textContent = busy ? "Stop recording" : "Record";
+  b.setAttribute("aria-pressed", busy ? "true" : "false");
+  panel.pzRecording = !!busy;
+}
+
+function showRecStatus(panel, text){
+  var out = recPart(panel, "rec-out");
+  if (!out) return;
+  var s = out.querySelector(".pz-rec-status");
+  if (!s){ s = el("p", "pz-rec-status pz-status"); out.appendChild(s); }
+  /* out is an aria-live region, so this announces itself. */
+  s.textContent = text;
+}
+
+function startRecording(panel){
+  if (!recordingSupported()) return;
+  var gen = ++recGen;          /* invalidates any previous attempt immediately */
+  stopAudio();
+  stopRecognition();
+  stopActiveRecorder();
+  clearRecording(panel);
+  setRecBusy(panel, true);
+  showRecStatus(panel, "Recording. Say the sentence.");
+
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream){
+    if (gen !== recGen){ releaseStream(stream); return; }   /* superseded */
+    var chunks = [];
+    var mr, capTimer = null;
+    try {
+      var mt = recMimeType();
+      mr = mt ? new window.MediaRecorder(stream, { mimeType: mt })
+              : new window.MediaRecorder(stream);
+    } catch(e){
+      releaseStream(stream);
+      setRecBusy(panel, false);
+      showRecStatus(panel, "Recording does not work in this browser. You can carry on.");
+      return;
+    }
+    recorder = mr; recStream = stream; recPanel = panel;
+
+    mr.ondataavailable = function(ev){
+      if (ev.data && ev.data.size > 0) chunks.push(ev.data);
+    };
+    mr.onerror = function(){
+      if (capTimer) clearTimeout(capTimer);
+      releaseStream(stream);
+      if (recorder === mr) recorder = null;
+      if (recStream === stream) recStream = null;
+      if (gen !== recGen) return;
+      setRecBusy(panel, false);
+      showRecStatus(panel, "The recording did not work. You can try again or carry on.");
+    };
+    mr.onstop = function(){
+      if (capTimer) clearTimeout(capTimer);
+      /* Release the stream THIS recorder owned, never a newer one. */
+      releaseStream(stream);
+      if (recorder === mr) recorder = null;
+      if (recStream === stream) recStream = null;
+      if (recPanel === panel) recPanel = null;
+      if (gen !== recGen) return;            /* a newer attempt owns the UI */
+      setRecBusy(panel, false);
+      if (!chunks.length){
+        showRecStatus(panel, "I did not catch that. You can try again or carry on.");
+        return;
+      }
+      var blob;
+      try {
+        blob = new Blob(chunks, { type: chunks[0].type || "audio/mp4" });
+      } catch(e){
+        showRecStatus(panel, "The recording did not work. You can try again or carry on.");
+        return;
+      }
+      if (panel.pzRecUrl){
+        try { URL.revokeObjectURL(panel.pzRecUrl); } catch(e){}
+      }
+      panel.pzRecUrl = URL.createObjectURL(blob);
+      var after = recPart(panel, "rec-after");
+      if (after) after.hidden = false;
+      showRecStatus(panel, "Your recording is ready. Listen to it, then listen to the model.");
+      refreshAudioButtons();
+    };
+
+    try {
+      mr.start();
+    } catch(e){
+      releaseStream(stream);
+      recorder = null; recStream = null;
+      if (gen !== recGen) return;
+      setRecBusy(panel, false);
+      showRecStatus(panel, "Recording does not work in this browser. You can carry on.");
+      return;
+    }
+    capTimer = setTimeout(function(){
+      try { if (mr.state === "recording") mr.stop(); } catch(e){}
+    }, RECORD_MAX_MS);
+  }).catch(function(){
+    if (gen !== recGen) return;
+    setRecBusy(panel, false);
+    /* Denied, or no microphone. Calm, and never a blocker. */
+    showRecStatus(panel, "The microphone is off. You can carry on without recording.");
+  });
+}
+
+function toggleRecording(panel){
+  if (panel.pzRecording){
+    stopActiveRecorder();
+  } else {
+    startRecording(panel);
+  }
+}
+
+function playOwnRecording(panel, btn){
+  if (!panel.pzRecUrl) return;
+  playSource(panel.pzRecUrl, recKeyFor(panel), btn);
+}
+
+function skipRecording(panel){
+  clearRecording(panel);
+  panel.pzRecSkipped = true;
+  var row = recPart(panel, "rec-main");
+  if (row) row.hidden = true;
+  showRecStatus(panel, "Recording is skipped. You can carry on.");
+}
+
+function buildRecordPanel(index, p){
+  var panel = el("div", "pz-record");
+  panel.id = "pz-record-" + (index + 1);
+
+  panel.appendChild(el("span", "pz-optional", "Optional"));
+  panel.appendChild(el("h2", null, "Record and compare"));
+  panel.appendChild(el("p", null,
+    "You can record the sentence. Then you listen to your voice. Then you " +
+    "listen to the model. You hear the difference yourself."));
+  var fr = el("p", "pz-fr",
+    "Vous pouvez enregistrer la phrase, écouter votre voix, puis écouter le " +
+    "modèle. Vous entendez la différence vous-même.");
+  fr.setAttribute("lang", "fr");
+  panel.appendChild(fr);
+
+  panel.appendChild(el("p", "pz-privacy",
+    "Recording is optional. Your recording stays in this browser. It is not " +
+    "sent anywhere, and it is deleted when you leave this sentence."));
+  var frp = el("p", "pz-fr",
+    "L’enregistrement est facultatif. Votre enregistrement reste dans ce " +
+    "navigateur. Il n’est pas envoyé, et il est supprimé quand vous quittez " +
+    "cette phrase.");
+  frp.setAttribute("lang", "fr");
+  panel.appendChild(frp);
+
+  var main = el("div", "pz-btnrow");
+  main.setAttribute("data-role", "rec-main");
+
+  var rec = el("button", "pz-btn-primary", "Record");
+  rec.type = "button";
+  rec.setAttribute("data-role", "rec-start");
+  rec.setAttribute("aria-pressed", "false");
+  rec.setAttribute("aria-label", "Record yourself saying: " + p.text);
+  rec.addEventListener("click", function(){ toggleRecording(panel); });
+  main.appendChild(rec);
+
+  var skip = el("button", "pz-btn-quiet", "Skip recording");
+  skip.type = "button";
+  skip.setAttribute("data-role", "rec-skip");
+  skip.addEventListener("click", function(){ skipRecording(panel); });
+  main.appendChild(skip);
+
+  panel.appendChild(main);
+
+  var out = el("div");
+  out.setAttribute("data-role", "rec-out");
+  out.setAttribute("aria-live", "polite");
+  panel.appendChild(out);
+
+  var after = el("div", "pz-btnrow");
+  after.setAttribute("data-role", "rec-after");
+  after.hidden = true;
+
+  var mine = el("button", "pz-btn-primary", "Play my voice");
+  mine.type = "button";
+  mine.setAttribute("data-rec-key", recKeyFor(panel));
+  mine.setAttribute("data-label-play", "Play my voice");
+  mine.setAttribute("data-label-stop", "Stop");
+  mine.setAttribute("aria-pressed", "false");
+  mine.setAttribute("aria-label", "Play my recording of: " + p.text);
+  mine.addEventListener("click", function(){ playOwnRecording(panel, mine); });
+  after.appendChild(mine);
+
+  var model = buildAudioButton(p.normal, "Listen to the model", "Stop", p.text);
+  if (model) after.appendChild(model);
+
+  var again = el("button", "pz-btn-quiet", "Record again");
+  again.type = "button";
+  again.addEventListener("click", function(){ startRecording(panel); });
+  after.appendChild(again);
+
+  var del = el("button", "pz-btn-quiet", "Delete");
+  del.type = "button";
+  del.addEventListener("click", function(){
+    clearRecording(panel);
+    showRecStatus(panel, "Your recording is deleted.");
+  });
+  after.appendChild(del);
+
+  var carry = el("button", "pz-btn-quiet", "Carry on");
+  carry.type = "button";
+  carry.addEventListener("click", function(){
+    clearRecording(panel);
+    goForward();
+  });
+  after.appendChild(carry);
+
+  panel.appendChild(after);
+  return panel;
+}
+
+/* ============================================================================
    PANEL RENDERING
    ========================================================================= */
 var screens = [];   /* DOM sections in order */
@@ -1451,7 +1830,12 @@ function buildPhraseScreen(index){
   chunkWrap.appendChild(ul);
   sec.appendChild(chunkWrap);
 
-  /* ---- optional speaking practice ---- */
+  /* ---- optional record and compare (needs no backend) ---- */
+  if (recordingSupported()){
+    sec.appendChild(buildRecordPanel(index, p));
+  }
+
+  /* ---- optional speaking practice (needs the AI endpoint) ---- */
   if (speakingEnabled()){
     sec.appendChild(buildSpeakPanel(index, p));
   }
@@ -1672,6 +2056,8 @@ function showScreen(i){
   if (i < 0 || i >= screens.length) return;
   stopAudio();
   stopRecognition();
+  stopActiveRecorder();
+  clearAllRecordings();      /* privacy: a recording never outlives its screen */
   abortPendingFeedback(null);
   resetAllPanels();
   for (var k = 0; k < screens.length; k++){
@@ -1930,6 +2316,20 @@ function init(){
   }
   screens.push(document.getElementById("pz-s8"));
 
+  /* tell the learner plainly whether recording is on */
+  var recAvail = document.getElementById("pz-record-availability");
+  if (recAvail){
+    if (recordingSupported()){
+      recAvail.textContent = "You can record your voice and compare it with the model.";
+    } else if (!window.isSecureContext){
+      recAvail.textContent = "Recording needs the course website. It does not work " +
+        "when this file is opened on its own. You can still read and say every sentence.";
+    } else {
+      recAvail.textContent = "Recording does not work in this browser. " +
+        "You can still read and say every sentence.";
+    }
+  }
+
   /* tell the learner plainly whether speaking practice is on */
   var avail = document.getElementById("pz-speak-availability");
   if (avail){
@@ -1981,8 +2381,12 @@ function init(){
   }
 
   /* release the microphone and audio if the page goes away */
-  window.addEventListener("pagehide", function(){ stopRecognition(); stopAudio(); });
-  window.addEventListener("beforeunload", function(){ stopRecognition(); stopAudio(); });
+  window.addEventListener("pagehide", function(){
+    stopRecognition(); stopActiveRecorder(); clearAllRecordings(); stopAudio();
+  });
+  window.addEventListener("beforeunload", function(){
+    stopRecognition(); stopActiveRecorder(); clearAllRecordings(); stopAudio();
+  });
 
   ensureLmsReady();
   showScreen(0);
@@ -2007,6 +2411,22 @@ window.__PZ__ = {
   isSafeOrigin: isSafeOrigin,
   isSafeUrl: isSafeUrl,
   isSafeEndpoint: isSafeEndpoint,
+  recordingSupported: recordingSupported,
+  recMimeType: recMimeType,
+  RECORD_MAX_MS: RECORD_MAX_MS,
+  recState: function(){
+    var out = [];
+    var panels = document.querySelectorAll(".pz-record");
+    for (var i = 0; i < panels.length; i++){
+      out.push({ id: panels[i].id,
+                 hasUrl: !!panels[i].pzRecUrl,
+                 url: panels[i].pzRecUrl || null,
+                 recording: !!panels[i].pzRecording,
+                 skipped: !!panels[i].pzRecSkipped });
+    }
+    return { panels: out, liveStream: !!recStream, liveRecorder: !!recorder,
+             gen: recGen, busyKey: audioBusyKey };
+  },
   isValidAudio: isValidAudio,
   sanitiseFeedback: sanitiseFeedback,
   focusIsApproved: focusIsApproved,
