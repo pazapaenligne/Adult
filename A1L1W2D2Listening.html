@@ -1179,7 +1179,7 @@ GENUINE EXTERNAL LIMITATIONS (cannot be resolved by editing this file)
 
       <div class="nav-row">
         <button type="button" class="btn btn-secondary" data-prev>Back</button>
-        <span></span>
+        <button type="button" class="btn btn-primary" id="restart-activity">Try again <span lang="fr">/ R&eacute;essayer</span></button>
       </div>
     </section>
 
@@ -1752,6 +1752,34 @@ GENUINE EXTERNAL LIMITATIONS (cannot be resolved by editing this file)
   function onReachFinalResult() {
     localComplete = true;
   }
+
+  /* ================= TRY AGAIN (full restart) ================= */
+  // Reuses each screen's existing Retry click-handler (chip reset for
+  // listen1/final, resetRow() for listen2/listen3) to restore every
+  // screen to its blank starting state, then clears the solved flags
+  // and route-guard-enabled Next buttons that Retry alone does not
+  // touch (Retry was only ever reached after an incorrect attempt,
+  // where Next had never been enabled), and returns to the welcome
+  // screen. No SCORM/Moodle/postMessage involved - purely local state.
+  function restartActivity() {
+    screenSolved.listen1 = false;
+    screenSolved.listen2 = false;
+    screenSolved.listen3 = false;
+    screenSolved.final = false;
+    ['retry-listen1', 'retry-listen2', 'retry-listen3', 'retry-final'].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (btn) btn.click();
+    });
+    ['next-listen1', 'next-listen2', 'next-listen3', 'next-final'].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (btn) btn.disabled = true;
+    });
+    localComplete = false;
+    showScreen(0);
+  }
+
+  var restartBtn = document.getElementById('restart-activity');
+  if (restartBtn) restartBtn.addEventListener('click', restartActivity);
 
   /* ================= INIT ================= */
   document.addEventListener('DOMContentLoaded', function () {
