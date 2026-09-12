@@ -7,8 +7,32 @@
 <!--
 ==============================================================================
 PAZAPA ADULT ENGLISH A1 | WEEK 2 - DAY 5 | STEP 2
-Listening Mission - "Complete the Clinic Schedule"
+Listening Mission - "Complete the Pazapa Academy Schedule"
 (information-transfer variety: listen to a phone message, complete a schedule)
+==============================================================================
+
+CURRENT STATE - READ THIS FIRST (accurate as of 2026-09-12)
+------------------------------------------------------------------------
+- Standalone, self-contained HTML activity. Works when opened directly in
+  a browser AND when embedded as a normal file in Moodle.
+- NO SCORM (no SCORM 1.2, no SCORM 2004, no API/API_1484_11 detection, no
+  LMSInitialize/LMSSetValue/LMSCommit/Initialize/SetValue/Commit calls).
+- NO CONFIG object, NO moodleOrigin, NO postMessage of any kind.
+- NO completion, grade, or score is reported to Moodle or to any parent
+  window. Reaching the final screen only sets a local JS flag
+  (`localComplete`) for this file's own internal use.
+- Venue is "Pazapa Academy" throughout (audio-confirmed by Aisha - see
+  CURRENT READINESS below). Correct answers: place = Pazapa Academy;
+  English class = Monday 9:00; computer class = Thursday 10:00; closed
+  day = Sunday.
+- The real classtimes_mp3.mp3 recording is embedded and live; all Listen/
+  Replay buttons play it; audioPendingConfirmation is empty.
+- IMPORTANT: every mention of SCORM, moodleOrigin, postMessage, or LMS
+  completion tracking anywhere BELOW this notice in the build log is
+  SUPERSEDED HISTORY describing an intermediate state of this file that
+  no longer exists. It is kept only as a build record. See ARCHITECTURE
+  NOTES and CURRENT READINESS further down for the authoritative current
+  description.
 ==============================================================================
 
 BUILD LOG
@@ -106,26 +130,38 @@ on 2026-09-11 before building; not silent choices)
    audio with ZERO further code changes required. No synthetic, silent,
    placeholder, or TTS audio has been created anywhere in this file.
 
-NOT YET DONE / OUTSTANDING
+NOT YET DONE / OUTSTANDING [SUPERSEDED - this entire section describes the
+file's state as of the initial 2026-09-11 build, BEFORE audio was supplied
+(2026-09-12) and BEFORE SCORM/Moodle-origin/postMessage were removed
+entirely (2026-09-12). It is kept only as a historical record and does
+NOT describe the current file. See "CURRENT STATE - READ THIS FIRST" at
+the top of this comment block, and "CURRENT READINESS" further below, for
+the accurate current state.]
 ---------------------------
-- NO AUDIO RECORDING SUPPLIED for this file yet (single key:
+- [SUPERSEDED] NO AUDIO RECORDING SUPPLIED for this file yet (single key:
   'listeningMessage', covering the whole telephone-message script). Until
   it is supplied and confirmed by ear, this activity is a fully built and
   testable UI scaffold but is NOT a working listening exercise - there is
   nothing to listen to. This is flagged, not hidden.
-- CONFIG.moodleOrigin is intentionally left blank - a deployment
-  placeholder only, validated by the same URL-based strict-origin check
-  used in W2D5 Step 1. No production origin has been invented.
+- [SUPERSEDED] CONFIG.moodleOrigin is intentionally left blank - a
+  deployment placeholder only, validated by the same URL-based strict-
+  origin check used in W2D5 Step 1. No production origin has been
+  invented.
 - Real-device Safari (iPhone/iPad) testing has not been performed on
   physical Apple hardware; all testing here used headless Chromium
   (Playwright) as a proxy, which is not equivalent, particularly for the
   native HTML5 drag-and-drop path (the tap-to-place and keyboard paths
   were exercised directly and do not depend on native DnD support).
-- Production Moodle completion persistence has not been verified against
-  a real LMS; SCORM testing used a mocked window.API object.
+  [This item is still genuinely outstanding - see GENUINE EXTERNAL
+  LIMITATIONS below.]
+- [SUPERSEDED] Production Moodle completion persistence has not been
+  verified against a real LMS; SCORM testing used a mocked window.API
+  object. (SCORM was removed entirely on 2026-09-12; this item no longer
+  applies.)
 - Licensed brand fonts (Filson Soft Black, Open Sans) have not been
   supplied; @font-face blocks remain commented out, fallback stack
-  (Arial/Helvetica/sans-serif) unchanged.
+  (Arial/Helvetica/sans-serif) unchanged. [Still genuinely outstanding -
+  see GENUINE EXTERNAL LIMITATIONS below.]
 
 2026-09-11 - Header/logo layout matched to A1_W2L2_DAY5_STEP3_PRONUNCIATION_CLINIC.html
   - Per Aisha's request, replaced the raster-PNG-logo + pill-badge header
@@ -385,7 +421,10 @@ NOT YET DONE / OUTSTANDING
     already-initialised); SCORM 2004 error 103 correctly ACCEPTED;
     missing-API focus retries do not consume the 3-attempt budget and a
     full 3 real attempts remain once the API appears; blank moodleOrigin
-    produces zero errors.
+    produces zero errors. [SUPERSEDED 2026-09-12: the SCORM engine these
+    5 checks tested was removed entirely later the same day - see the
+    "SCORM, Moodle-origin, and postMessage REMOVED" entry below. This
+    result describes engine correctness at the time, not current state.]
   - Byte-for-byte audio check: embedded classtimes_mp3.mp3 payload
     SHA-256-matches the original uploaded file exactly - confirmed
     unchanged by this pass.
@@ -488,51 +527,88 @@ CHANGES REQUIRED for Issues 1-4; audio investigation substantially deepened
   remain deployment/administrative steps outside what this file's code
   can resolve, not content or logic defects.
 
-ARCHITECTURE NOTES
+2026-09-12 - SCORM, Moodle-origin, and postMessage REMOVED (per Aisha's
+  instruction to return to the standard standalone-HTML Moodle workflow) -
+  SUPERSEDES the "production Moodle origin/persistence" item above, which
+  no longer applies since this file no longer attempts any LMS reporting.
+  - Removed entirely: the scorm state object, findAPI(),
+    ALREADY_INITIALIZED_CODE, initScorm(), getLastError(),
+    scormSetValue(), scormCommit(), getValidatedMoodleOrigin(),
+    sendMoodlePostMessage(), attemptCompletion(), completionAttempts,
+    MAX_COMPLETION_ATTEMPTS, lmsConfirmed, the CONFIG object (and its
+    moodleOrigin field), the window 'focus' and document
+    'visibilitychange' retry listeners, and the initScorm() call in the
+    DOMContentLoaded handler. No LMSInitialize/LMSSetValue/LMSCommit/
+    Initialize/SetValue/Commit/API/API_1484_11 detection remains anywhere
+    in this file.
+  - KEPT: a single local-only `localComplete` flag and
+    `onReachFinalResult()`, which now only sets that flag when the
+    learner reaches the final screen - no external reporting of any kind.
+    The visual completion recap (schedule + model sentences) was already
+    rendered by plain DOM/CSS and never depended on SCORM succeeding.
+  - NOT touched: all 6 screens and their order, "Pazapa Academy" and
+    every other answer/feedback/label, the Check/Retry model, unlimited
+    retries, all three tile-interaction paths, the bilingual instructions,
+    the embedded classtimes_mp3.mp3 recording (still byte-for-byte
+    identical - re-verified via SHA-256), the vector logo, colours,
+    typography, and layout.
+  - Re-verified after removal: JS syntax valid; grepped the live script
+    for every SCORM/Moodle keyword - zero functional matches; the full
+    97-check regression suite (functional, accessibility, audio, tile-
+    replacement, edge cases, responsive) re-run with 0 failures; a
+    dedicated standalone-mode test confirmed window.parent === window,
+    the final screen is reached normally, and no technical error text
+    appears anywhere in the rendered page.
+
+ARCHITECTURE NOTES (accurate as of 2026-09-12 - see SUPERSEDED note above
+regarding earlier SCORM-era passes)
 -------------------
-- SCORM engine (dual 1.2/2004 discovery, version-specific "already
-  initialised" handling, bounded 3-attempt retry with rediscovery,
-  postMessage with strict URL-based origin validation, no wildcard target)
-  is ported verbatim from the audited, corrected W2D5 Step 1 engine - not
-  re-derived from scratch - since that implementation has already been
-  through three rounds of correction and verification.
+- This is a self-contained, standalone HTML activity. It has NO SCORM
+  engine, NO CONFIG object, NO moodleOrigin, and sends NO postMessage of
+  any kind. It does not report completion, grades, or scores to Moodle or
+  to any parent frame. Reaching the final screen sets a single local
+  JavaScript boolean (`localComplete`) purely so the code has an internal
+  record that the learner finished - nothing is transmitted anywhere.
 - No scoring, no badges, no timers, no free-text input, no gamification.
 - No localStorage/sessionStorage/analytics/network calls; fully
-  self-contained; single persistent <audio> element.
+  self-contained; single persistent <audio> element (intentional - see
+  the audio section above for why one persistent element is reused
+  rather than creating a new Audio() per playback).
 - Brand colours are the same published Pazapa tokens and exact 20/40/60/80%
   tints used throughout this programme; the official Pazapa logo (no
   tagline) is reused byte-for-byte from the same extracted, verified asset
   used in W2D5 Step 1.
 ==============================================================================
 
-NOT YET VERIFIED EXTERNALLY (updated 2026-09-12 after Aisha's ear-
-confirmation of the audio wording - remaining items are deployment/
-administrative blockers, not code or content defects; none of these can
-be resolved by editing this file)
+CURRENT READINESS (2026-09-12)
 ------------------------------------------------------------------------
-- AUDIO WORDING: RESOLVED 2026-09-12. Aisha listened to
-  classtimes_mp3.mp3 and confirmed it says "Pazapa Academy" with the
-  correct schedule (Monday 9:00 English class, Thursday 10:00 computer
-  class, Sunday closed). No longer outstanding.
-- Production Moodle origin: CONFIG.moodleOrigin remains a blank
-  deployment placeholder; no real origin has been supplied or invented.
-- Production Moodle completion persistence: all SCORM testing in this
-  and prior passes used a mocked window.API/window.API_1484_11 object,
-  which validates this file's own logic correctly but does not prove
-  real completion persistence against an actual Moodle instance across a
-  page refresh.
-- Physical iPhone/iPad Safari: all mobile/tablet testing used headless
-  Chromium via Playwright's device-emulation profiles (a reasonable
-  technical proxy for touch events and viewport behaviour), not real
-  Safari on real Apple hardware.
-- Official licensed fonts (Filson Soft Black, Open Sans) have not been
-  supplied; the @font-face blocks remain commented out and the
-  Arial/Helvetica fallback stack is unchanged.
-This file is not labelled "fully verified" or "production ready" while
-the remaining three deployment items above are unresolved, but the
-content/logic-level blocker (audio wording) is now cleared - this
-activity is ready for learners from a content and functionality
-standpoint, pending only the administrative deployment steps above.
+- AUDIO WORDING: RESOLVED. Aisha listened to classtimes_mp3.mp3 and
+  confirmed by ear that it says "Pazapa Academy" with the correct
+  schedule (Monday 9:00 English class, Thursday 10:00 computer class,
+  Sunday closed).
+- Moodle completion tracking: NOT APPLICABLE. This file intentionally has
+  no SCORM engine and no completion-reporting mechanism of any kind, so
+  there is nothing to persist or verify on that front. If Moodle-tracked
+  completion is ever required again for this activity, that would be a
+  new feature request, not an outstanding item on the current build.
+This activity is ready for learners as a standalone Moodle HTML activity,
+with the understanding that it does NOT provide Moodle completion
+tracking - Moodle will not know whether a learner finished it.
+
+GENUINE EXTERNAL LIMITATIONS (cannot be resolved by editing this file)
+------------------------------------------------------------------------
+- Physical iPhone/iPad Safari has NOT been tested on real Apple hardware.
+  All mobile/tablet testing used headless Chromium via Playwright's
+  device-emulation profiles - a reasonable technical proxy for touch
+  events and viewport behaviour, but not the same as real Safari.
+- Official licensed brand fonts (Filson Soft Black, Open Sans) have not
+  been supplied; the @font-face blocks remain commented out and the
+  Arial/Helvetica fallback stack remains active.
+- A final upload-and-launch check inside the real Moodle course is still
+  recommended before wide deployment, purely to confirm the file displays
+  and behaves correctly when actually embedded in Moodle's page chrome -
+  this is a basic display/compatibility check, NOT a SCORM or completion-
+  persistence test, since no such system exists in this file.
 ==============================================================================
 -->
 <style>
@@ -925,7 +1001,7 @@ standpoint, pending only the administrative deployment steps above.
           <span class="slot slot-empty">Time?</span>
         </div>
         <div class="schedule-row">
-          <span class="row-label">Centre closed</span>
+          <span class="row-label">Pazapa Academy closed</span>
           <span class="slot slot-empty">Day?</span>
         </div>
       </div>
@@ -983,7 +1059,7 @@ standpoint, pending only the administrative deployment steps above.
           <button type="button" class="slot slot-empty slot-interactive" data-slot-row="computer" data-slot-type="time">Time?</button>
         </div>
         <div class="schedule-row">
-          <span class="row-label">Centre closed</span>
+          <span class="row-label">Pazapa Academy closed</span>
           <span class="slot slot-empty">Day?</span>
         </div>
       </div>
@@ -1041,7 +1117,7 @@ standpoint, pending only the administrative deployment steps above.
           <span class="slot slot-correct" id="recap-computer-time-4">10:00</span>
         </div>
         <div class="schedule-row active-row">
-          <span class="row-label">Centre closed</span>
+          <span class="row-label">Pazapa Academy closed</span>
           <span class="slot slot-empty" id="recap-closed-4">Day?</span>
         </div>
       </div>
@@ -1087,7 +1163,7 @@ standpoint, pending only the administrative deployment steps above.
           <span class="slot slot-correct">10:00</span>
         </div>
         <div class="schedule-row">
-          <span class="row-label">Centre closed</span>
+          <span class="row-label">Pazapa Academy closed</span>
           <span class="slot slot-correct">Sunday</span>
         </div>
       </div>
@@ -1109,10 +1185,13 @@ standpoint, pending only the administrative deployment steps above.
 
   </div>
 
-  <!-- Single persistent audio element (reserved; see AUDIO-GATING EXCEPTION
-       note in the header comment - the Play buttons above stay visible and
-       drive the reveal mechanic even while this is not yet wired to a real
-       file). -->
+  <!-- Single persistent audio element (intentional - reused across every
+       playback rather than creating a new Audio() per call, which loses
+       the user-gesture association on iOS Safari after the first tap).
+       The real classtimes_mp3.mp3 recording is embedded in AUDIO_FILES
+       below and is live: audioPendingConfirmation is empty, and every
+       Listen/Replay button on every screen plays this same recording via
+       the shared playAudio('listeningMessage') call. -->
   <audio id="persistentAudio" preload="none"></audio>
 
 </div>
@@ -1120,14 +1199,6 @@ standpoint, pending only the administrative deployment steps above.
 <script>
 (function () {
   'use strict';
-
-  /* ================= CONFIG ================= */
-  var CONFIG = {
-    // DEPLOYMENT PLACEHOLDER - set to the exact production Moodle origin
-    // before deployment, e.g. 'https://moodle.example.org' (scheme + host
-    // + optional port ONLY). Left blank deliberately; validated before use.
-    moodleOrigin: ''
-  };
 
   /* ================= AUDIO ENGINE ================= */
   // Central audio library + single playback engine, per Pazapa's mandatory
@@ -1671,145 +1742,19 @@ standpoint, pending only the administrative deployment steps above.
     });
   })();
 
-  /* ================= SCORM (ported verbatim from the audited W2D5 Step 1 engine) ================= */
-  var scorm = { api: null, version: null, initialized: false };
+  // Local-only completion marker. SCORM, Moodle-origin, and
+  // postMessage reporting have been fully removed per Aisha's
+  // 2026-09-12 instruction to return to standalone HTML activities.
+  // This activity now reports nothing externally; reaching the final
+  // screen simply shows the normal on-screen completion recap.
   var localComplete = false;
-  var lmsConfirmed = false;
-  var completionAttempts = 0;
-  var MAX_COMPLETION_ATTEMPTS = 3;
-
-  function findAPI(win) {
-    var attempts = 0;
-    while (win && attempts < 10) {
-      try {
-        if (win.API) return { api: win.API, version: '1.2' };
-        if (win.API_1484_11) return { api: win.API_1484_11, version: '2004' };
-      } catch (e) { return null; }
-      try {
-        if (win.parent && win.parent !== win) { win = win.parent; attempts++; }
-        else break;
-      } catch (e) { return null; }
-    }
-    return null;
-  }
-
-  // "Already initialized" (error 103) is a defined SCORM 2004 RTE
-  // condition; SCORM 1.2 has no verified equivalent code, so it is
-  // deliberately NOT given this leniency (see W2D5 Step 1's corrected
-  // engine for the full rationale).
-  var ALREADY_INITIALIZED_CODE = { '2004': '103' };
-
-  function initScorm() {
-    if (scorm.initialized) return true;
-    var found = null;
-    try {
-      found = findAPI(window);
-      if (!found && window.opener) {
-        try { found = findAPI(window.opener); } catch (e) { found = null; }
-      }
-    } catch (e) { found = null; }
-
-    if (!found) {
-      scorm.api = null; scorm.version = null; scorm.initialized = false;
-      return false;
-    }
-    scorm.api = found.api;
-    scorm.version = found.version;
-
-    var initResult;
-    try {
-      initResult = scorm.version === '1.2' ? scorm.api.LMSInitialize('') : scorm.api.Initialize('');
-    } catch (e) { initResult = 'false'; }
-
-    if (initResult === 'true' || initResult === true) {
-      scorm.initialized = true;
-      return true;
-    }
-    var code = getLastError();
-    var expectedCode = ALREADY_INITIALIZED_CODE[scorm.version];
-    if (expectedCode && code === expectedCode) {
-      scorm.initialized = true;
-      return true;
-    }
-    scorm.initialized = false;
-    return false;
-  }
-
-  function getLastError() {
-    if (!scorm.api) return null;
-    try {
-      return scorm.version === '1.2' ? scorm.api.LMSGetLastError() : scorm.api.GetLastError();
-    } catch (e) { return null; }
-  }
-
-  function scormSetValue(name12, name2004, value) {
-    if (!scorm.initialized) return false;
-    try {
-      var result = scorm.version === '1.2' ? scorm.api.LMSSetValue(name12, value) : scorm.api.SetValue(name2004, value);
-      return result === 'true' || result === true;
-    } catch (e) { return false; }
-  }
-
-  function scormCommit() {
-    if (!scorm.initialized) return false;
-    try {
-      var result = scorm.version === '1.2' ? scorm.api.LMSCommit('') : scorm.api.Commit('');
-      return result === 'true' || result === true;
-    } catch (e) { return false; }
-  }
-
-  function getValidatedMoodleOrigin() {
-    var raw = CONFIG.moodleOrigin;
-    if (!raw || typeof raw !== 'string') return null;
-    var parsed;
-    try { parsed = new URL(raw); } catch (e) { return null; }
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-    if (!parsed.hostname) return null;
-    if (parsed.username || parsed.password) return null;
-    if (parsed.pathname && parsed.pathname !== '/') return null;
-    if (parsed.search || parsed.hash) return null;
-    return parsed.origin;
-  }
-
-  function sendMoodlePostMessage() {
-    var origin = getValidatedMoodleOrigin();
-    if (!origin) return;
-    if (window.parent === window) return;
-    try {
-      window.parent.postMessage(
-        { type: 'pazapa-activity-complete', status: 'completed', localComplete: localComplete, lmsConfirmed: lmsConfirmed, completionAttempt: completionAttempts },
-        origin
-      );
-    } catch (e) { /* ignore */ }
-  }
-
-  function attemptCompletion() {
-    if (lmsConfirmed) return;
-    if (!localComplete) return;
-    if (completionAttempts >= MAX_COMPLETION_ATTEMPTS) return;
-    if (!scorm.initialized) initScorm();
-    if (!scorm.initialized) return;
-
-    completionAttempts++;
-    var setOk = scormSetValue('cmi.core.lesson_status', 'cmi.completion_status', 'completed');
-    var commitOk = setOk ? scormCommit() : false;
-    if (setOk && commitOk) lmsConfirmed = true;
-    sendMoodlePostMessage();
-  }
 
   function onReachFinalResult() {
     localComplete = true;
-    attemptCompletion();
   }
-
-  window.addEventListener('focus', function () { attemptCompletion(); });
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') attemptCompletion();
-  });
 
   /* ================= INIT ================= */
   document.addEventListener('DOMContentLoaded', function () {
-    initScorm();
     showScreen(0);
   });
 })();
