@@ -1080,185 +1080,28 @@ function nextSuccessMessage(){
   ]);
 
   /* ==========================================================================
-     COMPLETION -- SCORM 1.2 / 2004, retry-safe. No grade, score, pass/fail or
-     success_status is ever set: this is an ungraded activity.
-
-     VERSION LOCKING: which SCORM version to use is locked in only once a
-     real SCORM API is actually found -- never before. If no API exists yet
-     on a given Done press, nothing is locked: the next press searches
-     again from scratch, for as long as it takes an API to appear (e.g. a
-     late-loading LMS iframe). Once a version IS found and locked, it is
-     never reconsidered for the rest of the page session, even if that
-     version's reporting later fails. Priority when searching is SCORM 2004
-     (API_1484_11) first, then SCORM 1.2 (API). A SCORM 2004 failure never
-     causes a fall-back attempt at SCORM 1.2, and vice versa: only one
-     version is ever Initialize()'d or written to on a given page load.
-
-     No Terminate/LMSFinish is ever called. No postMessage is used: this
-     step never had a verified parent-side acknowledgement system, and an
-     unverified postMessage would not prove completion actually landed
-     anywhere.
+     COMPLETION -- local only (SCORM/LMS layer removed on instruction). No
+     grade, score, pass/fail or success_status is ever set: this remains an
+     ungraded activity. Nothing here depends on Moodle, an LMS API or a
+     parent/opener window; the file works identically opened directly in a
+     browser or embedded as a plain page.
      ========================================================================== */
-  var SCORM_VERSION = null;   /* null (not yet found) | "scorm2004" | "scorm12" -- locked only once a real API is found */
-  var SCORM_API = null;       /* the API object matching SCORM_VERSION, cached alongside it */
-  var initSucceeded = false;  /* tracks Initialize/LMSInitialize success for the locked version only */
   var completionSent = false;
 
-  /* Accepts a Boolean true, or the string "true" in any letter case -- both
-     SCORM 1.2 and SCORM 2004 APIs return the latter per spec, and some
-     wrappers return a real Boolean instead. One helper, reused for every
-     Initialize/SetValue/Commit check so they are all judged the same way. */
-  function lmsSucceeded(value){
-    return value === true || String(value).toLowerCase() === "true";
-  }
-
-  /* Walks this window, then up to 500 parent frames, then window.opener,
-     looking for a global named propName ("API_1484_11" or "API"). Each
-     frame's property read is individually try/caught: a cross-origin frame
-     throws a SecurityError on property access (not on reading .parent
-     itself), so one blocked frame in the middle of the chain no longer
-     aborts the whole search -- it simply moves on to the next frame up.
-     A visited-window list plus the w.parent===w self-reference check
-     prevent any possibility of an infinite loop. */
-  var FRAME_SEARCH_DEPTH = 500;
-  function searchWindowChainFor(propName){
-    var seen = [];
-    var w = window;
-    for(var i = 0; i < FRAME_SEARCH_DEPTH && w; i++){
-      try{
-        if(w[propName]) return w[propName];
-      }catch(e){ /* cross-origin frame: can't read this one, try the next */ }
-      var next;
-      try{ next = w.parent; }catch(e){ break; }
-      if(!next || next === w) break; /* reached the top frame */
-      if(seen.indexOf(next) !== -1) break; /* defensive loop guard */
-      seen.push(next);
-      w = next;
-    }
-    try{
-      if(window.opener && window.opener[propName]) return window.opener[propName];
-    }catch(e){ /* cross-origin opener: not reachable */ }
-    return null;
-  }
-  function findScorm2004Api(){ return searchWindowChainFor("API_1484_11"); }
-  function findScorm12Api(){ return searchWindowChainFor("API"); }
-
-  /* Runs on every reportCompletion() attempt UNTIL a real API is found.
-     SCORM_VERSION is only ever set to "scorm2004" or "scorm12" -- never to
-     any placeholder for "none found" -- and only a real, found API locks
-     it. When no API is found this call, SCORM_VERSION is simply left as
-     null, so the very next Done press searches again from scratch. Once
-     SCORM_VERSION does become "scorm2004" or "scorm12", this function
-     returns immediately on every future call and never re-searches or
-     switches versions, even if that version's reporting later fails. */
-  function detectScormVersionIfNeeded(){
-    if(SCORM_VERSION !== null) return;
-    var api2004;
-    try{ api2004 = findScorm2004Api(); }catch(e){ api2004 = null; }
-    if(api2004){
-      SCORM_VERSION = "scorm2004";
-      SCORM_API = api2004;
-      return;
-    }
-    var api12;
-    try{ api12 = findScorm12Api(); }catch(e){ api12 = null; }
-    if(api12){
-      SCORM_VERSION = "scorm12";
-      SCORM_API = api12;
-      return;
-    }
-    /* No API found this time. SCORM_VERSION stays null (not locked to any
-       "none" value) so detection genuinely runs again on the next attempt,
-       for as long as it takes an API to become available. */
-  }
-
-  /* Each step below stops immediately (and returns false) on the first
-     failed or thrown operation, so a failed SetValue never lets Commit run,
-     and a failed Initialize never lets SetValue run. completionSent is set
-     only when every required step for the locked version has succeeded. */
-  function reportScorm2004(){
-    if(!initSucceeded){
-      var initResult;
-      try{ initResult = SCORM_API.Initialize(""); }
-      catch(e){ console.error("SCORM 2004 Initialize threw:", e); return false; }
-      if(!lmsSucceeded(initResult)) return false;
-      initSucceeded = true;
-    }
-    var setResult;
-    try{ setResult = SCORM_API.SetValue("cmi.completion_status", "completed"); }
-    catch(e){ console.error("SCORM 2004 SetValue threw:", e); return false; }
-    if(!lmsSucceeded(setResult)) return false;
-    var commitResult;
-    try{ commitResult = SCORM_API.Commit(""); }
-    catch(e){ console.error("SCORM 2004 Commit threw:", e); return false; }
-    return lmsSucceeded(commitResult);
-  }
-  function reportScorm12(){
-    if(!initSucceeded){
-      var initResult;
-      try{ initResult = SCORM_API.LMSInitialize(""); }
-      catch(e){ console.error("SCORM 1.2 LMSInitialize threw:", e); return false; }
-      if(!lmsSucceeded(initResult)) return false;
-      initSucceeded = true;
-    }
-    var setResult;
-    try{ setResult = SCORM_API.LMSSetValue("cmi.core.lesson_status", "completed"); }
-    catch(e){ console.error("SCORM 1.2 LMSSetValue threw:", e); return false; }
-    if(!lmsSucceeded(setResult)) return false;
-    var commitResult;
-    try{ commitResult = SCORM_API.LMSCommit(""); }
-    catch(e){ console.error("SCORM 1.2 LMSCommit threw:", e); return false; }
-    return lmsSucceeded(commitResult);
-  }
-
-  /* Returns true only once the locked SCORM version has actually confirmed
-     success. completionSent is set only on that confirmed path -- never
-     before, and never merely because Done was pressed. Once true, this
-     function short-circuits immediately and calls nothing further, so a
-     repeated Done press after success never resubmits or re-Initializes.
-     If no API has been found yet, SCORM_VERSION is still null here, so
-     this attempt reports failure and leaves detection open to run again
-     on the next press -- it does not lock "no API" as a permanent state. */
+  /* Called only from the Done button. Fires exactly once. */
   function activityCompleted(){
     if(completionSent) return true;
-    detectScormVersionIfNeeded();
-    var reported = false;
-    if(SCORM_VERSION === "scorm2004"){
-      reported = reportScorm2004();
-    }else if(SCORM_VERSION === "scorm12"){
-      reported = reportScorm12();
-    }
-    if(reported){
-      completionSent = true;
-      console.log("W2L1 Step 4 completed via " + SCORM_VERSION);
-    }else if(SCORM_VERSION === null){
-      console.warn("No SCORM API found yet. Pressing Done again will search again.");
-    }else{
-      console.warn("SCORM reporting via " + SCORM_VERSION + " failed. Pressing Done again will retry.");
-    }
-    return reported;
+    completionSent = true;
+    return true;
   }
 
   doneBtn.addEventListener("click", function(){
     if(doneBtn.disabled) return;
-    var reported = activityCompleted();
-    if(reported){
-      doneBtn.disabled = true;
-      doneBtn.textContent = "Done \u2713";
-      if(doneStatus){ doneStatus.hidden = true; }
-      if(srLive){ srLive.textContent = "This step is finished."; }
-    }else{
-      /* No SCORM API was found, or a required step failed. Done stays
-         enabled and keeps its plain "Done" label -- never claim success
-         that did not happen -- so the learner can simply press it again. */
-      var message = "Completion could not be sent. Please try again, or contact support if the problem continues.";
-      if(doneStatus){
-        doneStatus.hidden = false;
-        doneStatus.className = "status-line is-retry";
-        doneStatus.innerHTML = '<span class="dot"></span>' + message;
-      }
-      if(srLive){ srLive.textContent = message; }
-    }
+    activityCompleted();
+    doneBtn.disabled = true;
+    doneBtn.textContent = "Done \u2713";
+    if(doneStatus){ doneStatus.hidden = true; }
+    if(srLive){ srLive.textContent = "This step is finished."; }
   });
 
 })();
