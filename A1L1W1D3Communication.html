@@ -232,6 +232,50 @@ p{ margin:0 0 12px; }
   margin:0 0 16px;
 }
 
+/* --------------------------------------------------------------------------
+   RECALL MY DETAILS — a reference panel, not a navigation control. It opens
+   over the current screen so the learner can check her chosen identity
+   (first name, last name, phone, email) without leaving the screen she is
+   on. One copy of the button sits in the actions bar at the bottom of every
+   screen from Screen 3 onward, alongside Carry on. The pathway itself stays
+   forward-only; nothing here moves the learner backward through it.
+   -------------------------------------------------------------------------- */
+.recall-trigger{
+  background:#FFFFFF;
+  color:var(--pz-dark);
+  border:2px solid var(--pz-cyan);
+  font-weight:600;
+  padding:10px 18px;
+}
+.recall-trigger:hover:not([disabled]){ background:var(--pz-cyan-20); }
+
+.recall-overlay{
+  position:fixed; inset:0;
+  background:rgba(46,46,45,0.55);
+  display:flex; align-items:center; justify-content:center;
+  padding:16px;
+  z-index:50;
+}
+.recall-overlay[hidden]{ display:none; }
+
+.recall-panel{
+  background:#FFFFFF;
+  border-radius:16px;
+  max-width:420px; width:100%;
+  padding:24px;
+  box-shadow:0 8px 30px rgba(46,46,45,0.3);
+}
+.recall-panel h2{ margin-bottom:4px; }
+.recall-panel .hint{ margin-bottom:16px; }
+.recall-list p{
+  margin:0 0 10px;
+  padding:10px 12px;
+  background:var(--pz-grey-40);
+  border-radius:10px;
+}
+.recall-list .who{ display:block; font-size:0.8125rem; font-weight:600; color:var(--pz-dark-80); }
+.recall-panel .actions{ margin-top:18px; }
+
 .scene{
   display:block; width:100%; height:auto;
   border-radius:12px; margin:0 0 18px;
@@ -660,6 +704,25 @@ body.no-fr .fr{ display:none; }
   </div>
 </header>
 
+<!-- ===================================================================
+     RECALL MY DETAILS — reference panel
+     Shows the learner's chosen identity (Screen 2) on top of whichever
+     screen she is on. Closing it returns her to that exact screen; it
+     never moves her forward or backward through the pathway.
+     =================================================================== -->
+<div class="recall-overlay" id="recallOverlay" hidden>
+  <div class="recall-panel" role="dialog" aria-modal="true" aria-labelledby="recallTitle" id="recallPanel">
+    <h2 id="recallTitle" tabindex="-1">Your details</h2>
+    <p class="hint">This is the identity you chose.
+      <span class="fr" lang="fr">Ce sont les coordonn&eacute;es de l'identit&eacute; que vous avez choisie.</span>
+    </p>
+    <div class="recall-list" id="recallList"></div>
+    <div class="actions">
+      <button type="button" class="btn-primary" id="recallClose">Close</button>
+    </div>
+  </div>
+</div>
+
 <main class="wrap" id="main">
 
   <!-- ===================================================================
@@ -747,6 +810,7 @@ body.no-fr .fr{ display:none; }
 
       <div class="actions">
         <button type="button" class="btn-primary" data-go="s-names">Carry on</button>
+        <button type="button" class="recall-trigger" hidden aria-haspopup="dialog">Recall my details</button>
       </div>
     </div>
   </section>
@@ -790,6 +854,7 @@ body.no-fr .fr{ display:none; }
 
       <div class="actions">
         <button type="button" class="btn-primary" data-go="s-contact" hidden>Carry on</button>
+        <button type="button" class="recall-trigger" hidden aria-haspopup="dialog">Recall my details</button>
       </div>
     </div>
   </section>
@@ -836,6 +901,7 @@ body.no-fr .fr{ display:none; }
 
       <div class="actions">
         <button type="button" class="btn-primary" data-go="s-help" hidden>Carry on</button>
+        <button type="button" class="recall-trigger" hidden aria-haspopup="dialog">Recall my details</button>
       </div>
     </div>
   </section>
@@ -884,6 +950,7 @@ body.no-fr .fr{ display:none; }
 
       <div class="actions">
         <button type="button" class="btn-primary" data-go="s-mission" hidden>Carry on</button>
+        <button type="button" class="recall-trigger" hidden aria-haspopup="dialog">Recall my details</button>
       </div>
     </div>
   </section>
@@ -969,6 +1036,7 @@ body.no-fr .fr{ display:none; }
 
       <div class="actions">
         <button type="button" class="btn-primary" data-go="s-review" hidden>Carry on</button>
+        <button type="button" class="recall-trigger" hidden aria-haspopup="dialog">Recall my details</button>
       </div>
     </div>
   </section>
@@ -1011,7 +1079,8 @@ body.no-fr .fr{ display:none; }
       </p>
 
       <div class="actions">
-        <button type="button" class="btn-quiet" id="againBtn">Try again</button>
+        <button type="button" class="btn-quiet" id="againBtn">Do the mission again</button>
+        <button type="button" class="recall-trigger" hidden aria-haspopup="dialog">Recall my details</button>
       </div>
 
       <p class="hint" style="margin-top:14px">Press Done to finish this step. Then go to the Review, Improve and Retry step.
@@ -1066,6 +1135,74 @@ body.no-fr .fr{ display:none; }
   var srLive   = document.getElementById("srLive");
   var nextLink = document.getElementById("nextLink");
   var againBtn = document.getElementById("againBtn");
+
+  /* ======================================================================
+     RECALL MY DETAILS
+     One trigger button sits at the bottom of every screen from Screen 3
+     onward (next to Carry on); all of them open the same dialog.
+     ====================================================================== */
+  var recallTriggers = document.querySelectorAll(".recall-trigger");
+  var recallOverlay = document.getElementById("recallOverlay");
+  var recallPanel   = document.getElementById("recallPanel");
+  var recallList    = document.getElementById("recallList");
+  var recallClose   = document.getElementById("recallClose");
+  var recallTitle   = document.getElementById("recallTitle");
+  var recallOpener  = null;
+
+  function buildRecallLine(label, value){
+    var p = document.createElement("p");
+    var who = document.createElement("span");
+    who.className = "who";
+    who.textContent = label;
+    p.appendChild(who);
+    p.appendChild(document.createTextNode(value));
+    return p;
+  }
+
+  function openRecallDialog(e){
+    if(!chosen) return;
+    recallOpener = e ? e.currentTarget : null;
+    recallList.innerHTML = "";
+    recallList.appendChild(buildRecallLine("First name", chosen.first));
+    recallList.appendChild(buildRecallLine("Last name", chosen.last));
+    recallList.appendChild(buildRecallLine("Telephone number", chosen.phone));
+    recallList.appendChild(buildRecallLine("Email address", chosen.email));
+    recallOverlay.hidden = false;
+    recallTitle.focus();
+    document.addEventListener("keydown", recallKeydown, true);
+  }
+
+  function closeRecallDialog(){
+    recallOverlay.hidden = true;
+    document.removeEventListener("keydown", recallKeydown, true);
+    if(recallOpener && !recallOpener.hidden) recallOpener.focus();
+  }
+
+  /* Escape closes; Tab is kept inside the two focusable controls. */
+  function recallKeydown(e){
+    if(e.key === "Escape"){ closeRecallDialog(); return; }
+    if(e.key === "Tab"){
+      var focusables = [recallTitle, recallClose];
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if(e.shiftKey && document.activeElement === first){
+        e.preventDefault(); last.focus();
+      }else if(!e.shiftKey && document.activeElement === last){
+        e.preventDefault(); first.focus();
+      }
+    }
+  }
+
+  for(var ri=0; ri<recallTriggers.length; ri++){
+    recallTriggers[ri].addEventListener("click", openRecallDialog);
+  }
+  if(recallClose){
+    recallClose.addEventListener("click", closeRecallDialog);
+  }
+  if(recallOverlay){
+    recallOverlay.addEventListener("click", function(e){
+      if(e.target === recallOverlay) closeRecallDialog();
+    });
+  }
 
   /* ======================================================================
      THE THREE PRACTICE IDENTITIES
@@ -1362,6 +1499,7 @@ body.no-fr .fr{ display:none; }
     var p = profileById(id);
     if(!p) return;
     chosen = p;
+    for(var rt=0; rt<recallTriggers.length; rt++){ recallTriggers[rt].hidden = false; }
 
     var btns = profileList.querySelectorAll(".profile");
     for(var i=0;i<btns.length;i++){
@@ -1950,6 +2088,8 @@ body.no-fr .fr{ display:none; }
     setRecStatus("", "");
 
     chosen = null;
+    for(var rt2=0; rt2<recallTriggers.length; rt2++){ recallTriggers[rt2].hidden = true; }
+    if(recallOverlay) recallOverlay.hidden = true;
     renderProfiles();
 
     var groups = document.querySelectorAll(".options[data-question]");
