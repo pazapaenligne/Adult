@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adult ESL Week 2 Day 5 - Times, Days and Appointments</title>
+<style>
+  :root{
+    --blue:#36BBD6;
+    --blue-dark:#1B7E92;
+    --green:#C9D646;
+    --yellow:#FCC104;
+    --yellow-muted:#FEE69B;
+    --red:#E6352B;
+    --grey-light:#EBEBEB;
+    --grey-dark:#2E2E2D;
+    --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    padding:0;
+    min-height:100%;
+    background:var(--grey-light);
+    color:var(--grey-dark);
+    font-family:'Open Sans', 'Segoe UI', Arial, sans-serif;
+    line-height:1.5;
+  }
+  h1,h2,h3{
+    font-family:'Filson Soft', 'Segoe UI', Arial, sans-serif;
+    font-weight:700;
+    margin:0 0 0.4em 0;
+    text-transform:none;
+    color:var(--grey-dark);
+  }
+  .app{
+    max-width:640px;
+    margin:0 auto;
+    padding:20px 16px 60px 16px;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 18px;
+    background:var(--blue-dark);
+    color:var(--white);
+    border-radius:10px;
+    margin-bottom:18px;
+  }
+  .topbar h1{
+    color:var(--white);
+    font-size:1.05rem;
+    margin:0;
+  }
+  .progress-text{
+    font-size:0.85rem;
+    color:var(--white);
+    opacity:0.9;
+    white-space:nowrap;
+    margin-left:12px;
+  }
+  .screen{
+    display:none;
+    background:var(--white);
+    border-radius:14px;
+    padding:24px 20px;
+    box-shadow:0 1px 4px rgba(0,0,0,0.08);
+  }
+  .screen.active{
+    display:block;
+  }
+  .mission-title{
+    font-size:1.5rem;
+    color:var(--blue-dark);
+  }
+  .scenario-card{
+    background:var(--grey-light);
+    border-left:6px solid var(--blue);
+    border-radius:10px;
+    padding:16px 18px;
+    margin:16px 0 20px 0;
+  }
+  .scenario-card p{
+    margin:0.3em 0;
+    font-size:1.05rem;
+  }
+  .clinic-icon{
+    display:flex;
+    justify-content:center;
+    margin-bottom:8px;
+  }
+  .clock-row{
+    display:flex;
+    gap:22px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin:10px 0 4px 0;
+  }
+  .clock-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .clock-item span{
+    font-size:0.9rem;
+    font-weight:700;
+    color:var(--blue-dark);
+  }
+  .icon-row{
+    display:flex;
+    gap:20px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin:14px 0 4px 0;
+    padding-top:14px;
+    border-top:1px dashed #CBD2D3;
+  }
+  .icon-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    max-width:120px;
+    text-align:center;
+  }
+  .icon-item.wide{
+    max-width:220px;
+    flex:1 1 220px;
+  }
+  .icon-item svg{
+    max-width:100%;
+    height:auto;
+    display:block;
+  }
+  .icon-item span{
+    font-size:0.85rem;
+    font-weight:700;
+    color:var(--blue-dark);
+  }
+  .question-text{
+    font-size:1.15rem;
+    margin-bottom:16px;
+  }
+  .fill-blank{
+    font-size:1.15rem;
+    margin-bottom:16px;
+  }
+  .fill-blank .blank{
+    display:inline-block;
+    min-width:60px;
+    border-bottom:3px solid var(--blue);
+    text-align:center;
+    font-weight:700;
+    color:var(--blue-dark);
+  }
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .option-btn{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:14px 16px;
+    min-height:48px;
+    font-size:1rem;
+    border:2px solid var(--grey-light);
+    background:var(--white);
+    border-radius:10px;
+    cursor:pointer;
+    color:var(--grey-dark);
+    font-family:inherit;
+    transition:border-color 0.15s ease;
+  }
+  .option-btn:hover{
+    border-color:var(--blue);
+  }
+  .option-btn:focus-visible{
+    outline:3px solid var(--blue-dark);
+    outline-offset:2px;
+  }
+  .option-btn.selected{
+    border-color:var(--blue-dark);
+    background:#EAF8FB;
+    font-weight:700;
+  }
+  .option-btn[disabled]{
+    cursor:default;
+  }
+  .option-btn.correct-answer{
+    border-color:var(--yellow);
+    background:var(--yellow-muted);
+  }
+  .status-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-height:28px;
+    margin-bottom:14px;
+  }
+  .status-dot{
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    flex:0 0 auto;
+  }
+  .status-dot.correct{
+    background:var(--green);
+  }
+  .status-dot.retry{
+    background:var(--yellow);
+  }
+  .status-text{
+    font-size:0.98rem;
+  }
+  .btn-row{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  button.action{
+    font-family:inherit;
+    font-size:1rem;
+    font-weight:700;
+    padding:13px 22px;
+    min-height:48px;
+    border-radius:24px;
+    border:none;
+    cursor:pointer;
+    color:var(--white);
+    background:var(--blue-dark);
+  }
+  button.action:hover{
+    background:#155f6e;
+  }
+  button.action:focus-visible{
+    outline:3px solid var(--grey-dark);
+    outline-offset:2px;
+  }
+  button.action.secondary{
+    background:var(--white);
+    color:var(--blue-dark);
+    border:2px solid var(--blue-dark);
+  }
+  button.action[disabled]{
+    background:#B9C4C6;
+    cursor:not-allowed;
+  }
+  .helper-card{
+    background:#FFF9E8;
+    border-left:6px solid var(--yellow);
+    border-radius:10px;
+    padding:16px 18px;
+    margin:14px 0 18px 0;
+  }
+  .helper-card h3{
+    margin-top:0;
+    font-size:1.1rem;
+  }
+  .summary-list{
+    list-style:none;
+    margin:0 0 20px 0;
+    padding:0;
+  }
+  .summary-list li{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    background:var(--grey-light);
+    border-radius:10px;
+    margin-bottom:10px;
+    font-size:1.02rem;
+  }
+  .summary-icon{
+    width:26px;
+    height:26px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+    color:var(--white);
+    font-weight:700;
+    font-size:0.9rem;
+  }
+  .summary-icon.done{
+    background:var(--green);
+    color:var(--grey-dark);
+  }
+  .summary-icon.reviewed{
+    background:var(--yellow);
+    color:var(--grey-dark);
+  }
+  .completion-text{
+    font-size:1.05rem;
+    margin-bottom:20px;
+  }
+  .fr-note{
+    font-size:0.9rem;
+    color:#5b5b5a;
+    font-style:italic;
+    margin-top:-8px;
+    margin-bottom:16px;
+  }
+  @media (max-width:480px){
+    .app{padding:14px 10px 50px 10px;}
+    .screen{padding:18px 14px;}
+    .mission-title{font-size:1.3rem;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <h1>Week 2, Day 5 &ndash; Review, Improve and Retry</h1>
+    <div class="progress-text" id="progressText" aria-live="polite">Start</div>
+  </div>
+
+  <!-- SCREEN 0: INTRO -->
+  <section class="screen active" id="screen-intro" aria-labelledby="introHeading">
+    <div class="clinic-icon" aria-hidden="true">
+      <svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="14" width="60" height="50" rx="8" fill="#36BBD6"/>
+        <rect x="6" y="14" width="60" height="14" rx="8" fill="#1B7E92"/>
+        <rect x="16" y="6" width="6" height="16" rx="3" fill="#2E2E2D"/>
+        <rect x="50" y="6" width="6" height="16" rx="3" fill="#2E2E2D"/>
+        <circle cx="36" cy="45" r="13" fill="#FFFFFF"/>
+        <rect x="34" y="37" width="4" height="16" rx="2" fill="#E6352B"/>
+        <rect x="28" y="43" width="16" height="4" rx="2" fill="#E6352B"/>
+      </svg>
+    </div>
+    <h2 class="mission-title" id="introHeading">Get to the Appointment on Time</h2>
+    <p>This is the final mission for today. Read about Hana's appointment. Then answer five questions about the day, the time and the clinic.</p>
+    <div class="scenario-card">
+      <p><strong>Sunrise Dental Clinic</strong></p>
+      <p>Hana's appointment is on <strong>Thursday</strong> at <strong>10:00</strong>.</p>
+      <p>The clinic opens at <strong>8:00</strong>.</p>
+      <p>The clinic is closed on <strong>Friday</strong>.</p>
+      <div class="clock-row" id="introClocks" aria-hidden="true"></div>
+      <div class="icon-row" id="introIcons" aria-hidden="true"></div>
+    </div>
+    <p class="fr-note">Vous pouvez revenir à cette carte pour vérifier vos réponses. / You can look back at this card to check your answers.</p>
+    <div class="btn-row">
+      <button type="button" class="action" id="btnStart">Carry on</button>
+    </div>
+  </section>
+
+  <!-- SCREEN: QUESTION TEMPLATE (reused via JS for Q1-Q5 and remedial re-checks) -->
+  <section class="screen" id="screen-question" aria-labelledby="questionHeading">
+    <h2 id="questionHeading">Check your understanding</h2>
+    <div class="scenario-card" id="referenceCard">
+      <p><strong>Sunrise Dental Clinic</strong></p>
+      <p>Hana's appointment is on <strong>Thursday</strong> at <strong>10:00</strong>.</p>
+      <p>The clinic opens at <strong>8:00</strong>.</p>
+      <p>The clinic is closed on <strong>Friday</strong>.</p>
+      <div class="clock-row" id="referenceClocks" aria-hidden="true"></div>
+    </div>
+    <p class="question-text" id="questionText"></p>
+    <div class="options" id="optionsContainer" role="group" aria-labelledby="questionText"></div>
+    <div class="status-row" id="statusRow" aria-live="polite"></div>
+    <div class="btn-row" id="questionButtons"></div>
+  </section>
+
+  <!-- SCREEN: REMEDIAL CARD TEMPLATE -->
+  <section class="screen" id="screen-remedial" aria-labelledby="remedialHeading">
+    <h2 id="remedialHeading">Quick review</h2>
+    <div class="helper-card" id="remedialCard"></div>
+    <div class="btn-row">
+      <button type="button" class="action" id="btnRemedialContinue">Carry on</button>
+    </div>
+  </section>
+
+  <!-- SCREEN: COMPLETION -->
+  <section class="screen" id="screen-complete" aria-labelledby="completeHeading">
+    <h2 id="completeHeading">Well done</h2>
+    <p class="completion-text">You can now read a simple schedule, check an appointment and ask about its day and time. Review any highlighted item, then try the final check again.</p>
+    <ul class="summary-list" id="summaryList"></ul>
+    <div class="btn-row">
+      <button type="button" class="action secondary" id="btnRetryMission">Try the final check again</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Scenario data ----------
+  var SCENARIO = {
+    day: "Thursday",
+    time: "10:00",
+    opens: "8:00",
+    closedDay: "Friday"
+  };
+
+  // ---------- Original clock-face graphic (generated, not traced from any source image) ----------
+  function buildClockSVG(hour, size){
+    var s = size || 84;
+    var cx = s / 2, cy = s / 2;
+    var faceR = s / 2 - 4;
+    var numR = faceR - 12;
+    var hourAngle = (hour % 12) * 30; // whole hours only, minute hand always at 12
+    var hRad = (hourAngle - 90) * Math.PI / 180;
+    var hLen = faceR * 0.5;
+    var hx = cx + hLen * Math.cos(hRad);
+    var hy = cy + hLen * Math.sin(hRad);
+    var mLen = faceR * 0.72;
+    var mx = cx;
+    var my = cy - mLen;
+
+    var numbers = "";
+    for (var n = 1; n <= 12; n++){
+      var ang = (n * 30 - 90) * Math.PI / 180;
+      var nx = cx + numR * Math.cos(ang);
+      var ny = cy + numR * Math.sin(ang);
+      numbers += '<text x="' + nx.toFixed(1) + '" y="' + (ny + 3).toFixed(1) +
+        '" font-size="' + (s * 0.11).toFixed(1) + '" text-anchor="middle" ' +
+        'font-family="Open Sans, Arial, sans-serif" fill="#2E2E2D">' + n + '</text>';
+    }
+
+    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 ' + s + ' ' + s + '" role="img" aria-hidden="true">' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + faceR + '" fill="#FFFFFF" stroke="#36BBD6" stroke-width="4"/>' +
+      numbers +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + (s*0.035).toFixed(1) + '" fill="#2E2E2D"/>' +
+      '<line x1="' + cx + '" y1="' + cy + '" x2="' + hx.toFixed(1) + '" y2="' + hy.toFixed(1) + '" stroke="#2E2E2D" stroke-width="4" stroke-linecap="round"/>' +
+      '<line x1="' + cx + '" y1="' + cy + '" x2="' + mx.toFixed(1) + '" y2="' + my.toFixed(1) + '" stroke="#1B7E92" stroke-width="3" stroke-linecap="round"/>' +
+      '</svg>';
+  }
+
+  function populateClocks(containerId){
+    var el = document.getElementById(containerId);
+    if (!el) { return; }
+    el.innerHTML =
+      '<div class="clock-item">' + buildClockSVG(8, 84) + '<span>Opens 8:00</span></div>' +
+      '<div class="clock-item">' + buildClockSVG(10, 84) + '<span>Appointment 10:00</span></div>';
+  }
+
+  // ---------- Additional original icons (generated, not traced from any source image) ----------
+  function buildWeekStripSVG(size){
+    var w = size || 220, h = 46;
+    var days = ["M","T","W","T","F","S","S"];
+    var highlightIdx = 3; // Thursday
+    var cellW = w / 7;
+    var cells = "";
+    for (var i = 0; i < 7; i++){
+      var cx = cellW * i + cellW / 2;
+      var isHighlight = (i === highlightIdx);
+      var isClosed = (i === 4); // Friday closed
+      var fill = isHighlight ? "#36BBD6" : "#FFFFFF";
+      var stroke = isHighlight ? "#1B7E92" : "#CBD2D3";
+      var textFill = isHighlight ? "#FFFFFF" : (isClosed ? "#E6352B" : "#2E2E2D");
+      cells += '<circle cx="' + cx.toFixed(1) + '" cy="' + (h/2) + '" r="' + (cellW*0.38).toFixed(1) +
+        '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2"/>' +
+        '<text x="' + cx.toFixed(1) + '" y="' + (h/2 + 4) + '" font-size="13" text-anchor="middle" ' +
+        'font-family="Open Sans, Arial, sans-serif" font-weight="700" fill="' + textFill + '">' + days[i] + '</text>';
+    }
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-hidden="true">' + cells + '</svg>';
+  }
+
+  function buildSignSVG(size){
+    var w = size || 96, h = 96;
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 96 96" role="img" aria-hidden="true">' +
+      '<line x1="48" y1="4" x2="48" y2="20" stroke="#2E2E2D" stroke-width="3"/>' +
+      '<rect x="14" y="18" width="68" height="30" rx="5" fill="#C9D646" stroke="#1B7E92" stroke-width="2"/>' +
+      '<text x="48" y="38" font-size="16" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-weight="700" fill="#2E2E2D">OPEN</text>' +
+      '<rect x="14" y="54" width="68" height="30" rx="5" fill="#EBEBEB" stroke="#CBD2D3" stroke-width="2"/>' +
+      '<text x="48" y="74" font-size="14" text-anchor="middle" font-family="Open Sans, Arial, sans-serif" font-weight="700" fill="#E6352B">CLOSED</text>' +
+      '</svg>';
+  }
+
+  function buildClipboardSVG(size){
+    var w = size || 84, h = 96;
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 84 96" role="img" aria-hidden="true">' +
+      '<rect x="8" y="8" width="68" height="82" rx="8" fill="#FFFFFF" stroke="#36BBD6" stroke-width="4"/>' +
+      '<rect x="28" y="2" width="28" height="14" rx="4" fill="#1B7E92"/>' +
+      '<line x1="20" y1="34" x2="64" y2="34" stroke="#CBD2D3" stroke-width="4" stroke-linecap="round"/>' +
+      '<line x1="20" y1="48" x2="64" y2="48" stroke="#CBD2D3" stroke-width="4" stroke-linecap="round"/>' +
+      '<line x1="20" y1="62" x2="48" y2="62" stroke="#CBD2D3" stroke-width="4" stroke-linecap="round"/>' +
+      '<circle cx="60" cy="74" r="12" fill="#FCC104"/>' +
+      '<path d="M60 68 v6 l4 4" stroke="#2E2E2D" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+      '</svg>';
+  }
+
+  function populateIcons(containerId){
+    var el = document.getElementById(containerId);
+    if (!el) { return; }
+    el.innerHTML =
+      '<div class="icon-item wide">' + buildWeekStripSVG(220) + '<span>Appointment day: Thursday</span></div>' +
+      '<div class="icon-item">' + buildSignSVG(84) + '<span>Clinic hours sign</span></div>' +
+      '<div class="icon-item">' + buildClipboardSVG(76) + '<span>Appointment card</span></div>';
+  }
+
+  populateClocks("introClocks");
+  populateClocks("referenceClocks");
+  populateIcons("introIcons");
+
+  // ---------- Question bank for the five checks ----------
+  // Each question: id, skill (Days/Times/Opening hours/Questions), text/blank, options, correctIndex
+  var QUESTIONS = [
+    {
+      id: "q1",
+      skill: "Days",
+      retryType: "day",
+      type: "mcq",
+      text: "Choose Hana's appointment day.",
+      options: ["Monday", "Wednesday", "Thursday", "Sunday"],
+      correct: 2
+    },
+    {
+      id: "q2",
+      skill: "Times",
+      retryType: "time",
+      type: "mcq",
+      text: "Choose Hana's appointment time.",
+      options: ["7:00", "8:00", "9:00", "10:00"],
+      correct: 3
+    },
+    {
+      id: "q3",
+      skill: "Opening hours",
+      retryType: "prep",
+      type: "mcq",
+      text: "Complete: The clinic opens ___ 8:00.",
+      options: ["at", "on"],
+      correct: 0
+    },
+    {
+      id: "q4",
+      skill: "Days",
+      retryType: "prep",
+      type: "mcq",
+      text: "Complete: The appointment is ___ Thursday.",
+      options: ["on", "at"],
+      correct: 0
+    },
+    {
+      id: "q5",
+      skill: "Questions",
+      retryType: "question",
+      type: "mcq",
+      text: "Choose the correct question for the answer 'At 10:00.'",
+      options: [
+        "What day is the appointment?",
+        "What time is the appointment?",
+        "Is the clinic open on Thursday?"
+      ],
+      correct: 1
+    }
+  ];
+
+  // ---------- Remedial cards, one per retry type ----------
+  var REMEDIALS = {
+    day: {
+      title: "Two-day check",
+      html: "<h3>Two-day check</h3><p>Hana's appointment is on <strong>Thursday</strong>.</p><p>Is it on <strong>Monday</strong> or on <strong>Thursday</strong>?</p><p><strong>Answer: Thursday.</strong></p>",
+    },
+    time: {
+      title: "Listen again",
+      html: "<h3>Read the sentence again</h3><p>Hana's appointment is at <strong>10:00</strong>.</p><p>The time is <strong>10:00</strong>, not 8:00 or 9:00.</p>",
+    },
+    prep: {
+      title: "Day or time?",
+      html: "<h3>Day or time?</h3><p>Use <strong>on</strong> with a day: <em>on Thursday, on Friday</em>.</p><p>Use <strong>at</strong> with a time: <em>at 8:00, at 10:00</em>.</p>",
+    },
+    question: {
+      title: "What day or what time?",
+      html: "<h3>What day...? or What time...?</h3><p><strong>What day</strong> is the appointment? &rarr; On Thursday.</p><p><strong>What time</strong> is the appointment? &rarr; At 10:00.</p>",
+    }
+  };
+
+  // Order in which remedial types are checked/shown
+  var RETRY_ORDER = ["day", "time", "prep", "question"];
+
+  // ---------- State ----------
+  var state = {
+    currentIndex: 0,           // index into QUESTIONS during main pass
+    firstAttemptWrong: {},     // retryType -> true if any related question was wrong on first try
+    selectedOption: null,
+    answeredCorrectly: false,
+    remedialQueue: [],
+    remedialIndex: 0,
+    skillStatus: {             // Days / Times / Opening hours / Questions -> 'done' | 'reviewed'
+      "Days": "done",
+      "Times": "done",
+      "Opening hours": "done",
+      "Questions": "done"
+    }
+  };
+
+  // ---------- DOM refs ----------
+  var screens = {
+    intro: document.getElementById("screen-intro"),
+    question: document.getElementById("screen-question"),
+    remedial: document.getElementById("screen-remedial"),
+    complete: document.getElementById("screen-complete")
+  };
+  var progressText = document.getElementById("progressText");
+  var questionText = document.getElementById("questionText");
+  var optionsContainer = document.getElementById("optionsContainer");
+  var statusRow = document.getElementById("statusRow");
+  var questionButtons = document.getElementById("questionButtons");
+  var remedialCard = document.getElementById("remedialCard");
+  var summaryList = document.getElementById("summaryList");
+
+  function showScreen(name){
+    Object.keys(screens).forEach(function(key){
+      screens[key].classList.toggle("active", key === name);
+    });
+    screens[name].scrollIntoView({behavior:"instant", block:"start"});
+  }
+
+  document.getElementById("btnStart").addEventListener("click", function(){
+    state.currentIndex = 0;
+    startQuestion(QUESTIONS[0]);
+  });
+
+  // ---------- Question rendering ----------
+  function startQuestion(q){
+    progressText.textContent = "Check " + (state.currentIndex + 1) + " of " + QUESTIONS.length;
+    state.selectedOption = null;
+    state.answeredCorrectly = false;
+
+    questionText.textContent = q.text;
+    optionsContainer.innerHTML = "";
+    statusRow.innerHTML = "";
+    questionButtons.innerHTML = "";
+
+    q.options.forEach(function(opt, idx){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "option-btn";
+      btn.textContent = opt;
+      btn.setAttribute("data-idx", idx);
+      btn.addEventListener("click", function(){
+        if (btn.disabled) { return; }
+        var siblings = optionsContainer.querySelectorAll(".option-btn");
+        siblings.forEach(function(s){ s.classList.remove("selected"); });
+        btn.classList.add("selected");
+        state.selectedOption = idx;
+        renderCheckButton(q);
+      });
+      optionsContainer.appendChild(btn);
+    });
+
+    renderCheckButton(q);
+    showScreen("question");
+  }
+
+  function renderCheckButton(q){
+    questionButtons.innerHTML = "";
+    var checkBtn = document.createElement("button");
+    checkBtn.type = "button";
+    checkBtn.className = "action";
+    checkBtn.textContent = "Check";
+    checkBtn.disabled = (state.selectedOption === null);
+    checkBtn.addEventListener("click", function(){ handleCheck(q); });
+    questionButtons.appendChild(checkBtn);
+  }
+
+  function handleCheck(q){
+    var correct = (state.selectedOption === q.correct);
+    var options = optionsContainer.querySelectorAll(".option-btn");
+    options.forEach(function(btn){ btn.disabled = true; });
+
+    statusRow.innerHTML = "";
+    var dot = document.createElement("span");
+    dot.className = "status-dot " + (correct ? "correct" : "retry");
+    var text = document.createElement("span");
+    text.className = "status-text";
+
+    if (correct){
+      text.textContent = "That's right.";
+      statusRow.appendChild(dot);
+      statusRow.appendChild(text);
+      state.answeredCorrectly = true;
+
+      var chosenBtn = optionsContainer.querySelector(".option-btn.selected");
+      if (chosenBtn){ chosenBtn.classList.add("correct-answer"); }
+
+      questionButtons.innerHTML = "";
+      var nextBtn = document.createElement("button");
+      nextBtn.type = "button";
+      nextBtn.className = "action";
+      nextBtn.textContent = "Carry on";
+      nextBtn.addEventListener("click", function(){ advanceAfterQuestion(q); });
+      questionButtons.appendChild(nextBtn);
+    } else {
+      // record first-attempt failure for the relevant skill category, once
+      if (!state.answeredCorrectly){
+        state.firstAttemptWrong[q.retryType] = true;
+        state.skillStatus[q.skill] = "reviewed";
+      }
+      text.textContent = "Look at the appointment card again.";
+      statusRow.appendChild(dot);
+      statusRow.appendChild(text);
+
+      questionButtons.innerHTML = "";
+      var retryBtn = document.createElement("button");
+      retryBtn.type = "button";
+      retryBtn.className = "action secondary";
+      retryBtn.textContent = "Retry";
+      retryBtn.addEventListener("click", function(){
+        options.forEach(function(btn){
+          btn.disabled = false;
+          btn.classList.remove("selected");
+        });
+        state.selectedOption = null;
+        statusRow.innerHTML = "";
+        renderCheckButton(q);
+      });
+      questionButtons.appendChild(retryBtn);
+    }
+  }
+
+  function advanceAfterQuestion(q){
+    state.currentIndex++;
+    if (state.currentIndex < QUESTIONS.length){
+      startQuestion(QUESTIONS[state.currentIndex]);
+    } else {
+      buildRemedialQueue();
+      runNextRemedialOrFinish();
+    }
+  }
+
+  // ---------- Remedial flow ----------
+  function buildRemedialQueue(){
+    state.remedialQueue = RETRY_ORDER.filter(function(type){
+      return !!state.firstAttemptWrong[type];
+    });
+    state.remedialIndex = 0;
+  }
+
+  function runNextRemedialOrFinish(){
+    if (state.remedialIndex < state.remedialQueue.length){
+      var type = state.remedialQueue[state.remedialIndex];
+      var card = REMEDIALS[type];
+      progressText.textContent = "Quick review";
+      remedialCard.innerHTML = card.html;
+      showScreen("remedial");
+    } else {
+      showCompletion();
+    }
+  }
+
+  document.getElementById("btnRemedialContinue").addEventListener("click", function(){
+    state.remedialIndex++;
+    runNextRemedialOrFinish();
+  });
+
+  // ---------- Completion ----------
+  function showCompletion(){
+    progressText.textContent = "Finished";
+    summaryList.innerHTML = "";
+    ["Days", "Times", "Opening hours", "Questions"].forEach(function(skill){
+      var li = document.createElement("li");
+      var icon = document.createElement("span");
+      var status = state.skillStatus[skill];
+      icon.className = "summary-icon " + (status === "done" ? "done" : "reviewed");
+      icon.textContent = (status === "done") ? "\u2713" : "\u2713";
+      var label = document.createElement("span");
+      label.textContent = skill + (status === "reviewed" ? " (reviewed)" : "");
+      li.appendChild(icon);
+      li.appendChild(label);
+      summaryList.appendChild(li);
+    });
+    showScreen("complete");
+  }
+
+  document.getElementById("btnRetryMission").addEventListener("click", function(){
+    state.currentIndex = 0;
+    state.firstAttemptWrong = {};
+    state.remedialQueue = [];
+    state.remedialIndex = 0;
+    state.skillStatus = {
+      "Days": "done",
+      "Times": "done",
+      "Opening hours": "done",
+      "Questions": "done"
+    };
+    startQuestion(QUESTIONS[0]);
+  });
+
+})();
+</script>
+</body>
+</html>
