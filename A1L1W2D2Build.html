@@ -250,6 +250,7 @@
     <h2 id="heading2" tabindex="-1">Read The Clock</h2>
     <div class="card">
       <h3>1. Look, write, and say the time</h3>
+      <p style="color:#7a7a78;">Example: eight o'clock</p>
       <div class="clock-grid" id="clocksRead"></div>
     </div>
     <div class="card">
@@ -502,6 +503,14 @@ var STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
 /* ================= SCORM (1.2 and 2004) ================= */
 var scormAPI = null, scormVersion = null, scormInitialized = false;
 var sessionEnded = false;
+/* lmsCompletionConfirmed: null = unknown/not yet checked, true = LMS confirms completed/passed,
+   false = LMS explicitly reports not completed (or a completion attempt explicitly failed).
+   This is the ONLY source of truth for "Moodle confirmed completion" — never inferred from
+   local storage or suspend_data. */
+var lmsCompletionConfirmed = null;
+/* standaloneCompletionConfirmed: true only once a completed state has been verified as
+   successfully written to (and read back from) localStorage, with no SCORM API active. */
+var standaloneCompletionConfirmed = false;
 
 /* Only boolean true or string "true" count as SCORM success. */
 function isScormSuccess(value){
@@ -545,6 +554,11 @@ function initScorm(){
     if(scormVersion === '1.2'){
       try{
         var status = scormAPI.LMSGetValue('cmi.core.lesson_status');
+        if(status === 'completed' || status === 'passed'){
+          lmsCompletionConfirmed = true;
+        }else if(status){
+          lmsCompletionConfirmed = false;
+        } /* else leave as null (unknown) */
         /* only fill in a blank/not-attempted status; never touch completed, passed, incomplete, etc. */
         if(!status || status === 'not attempted'){
           var setOk = isScormSuccess(scormAPI.LMSSetValue('cmi.core.lesson_status', 'incomplete'));
@@ -552,19 +566,26 @@ function initScorm(){
           if(!(setOk && commitOk)){
             try{ console.warn('Pazapa lesson: could not initialise SCORM 1.2 lesson_status.'); }catch(e2){}
           }
+          lmsCompletionConfirmed = false;
         }
-      }catch(e){}
+      }catch(e){ lmsCompletionConfirmed = null; }
     }else{
       try{
         var status2004 = scormAPI.GetValue('cmi.completion_status');
+        if(status2004 === 'completed'){
+          lmsCompletionConfirmed = true;
+        }else if(status2004 && status2004 !== 'unknown'){
+          lmsCompletionConfirmed = false;
+        } /* else leave as null (unknown) */
         if(!status2004 || status2004 === 'unknown' || status2004 === 'not attempted'){
           var setOk2 = isScormSuccess(scormAPI.SetValue('cmi.completion_status', 'incomplete'));
           var commitOk2 = isScormSuccess(scormAPI.Commit(''));
           if(!(setOk2 && commitOk2)){
             try{ console.warn('Pazapa lesson: could not initialise SCORM 2004 completion_status.'); }catch(e2){}
           }
+          lmsCompletionConfirmed = false;
         }
-      }catch(e){}
+      }catch(e){ lmsCompletionConfirmed = null; }
     }
   }catch(e){
     scormAPI = null; scormInitialized = false;
@@ -825,12 +846,12 @@ function checkReadClocks(){
     var ok = answerMatches(input.value, readClocks[i].answer);
     STATE.readClocksCorrect[i] = ok;
     if(ok){
-      fb.innerHTML = '<span aria-hidden="true">&#10003;</span> Correct';
+      fb.innerHTML = '<span aria-hidden="true">&#10003;</span> Correct! Well done.';
       fb.className = 'feedback-inline ok';
       input.style.borderColor = 'var(--green)';
       okCount++;
     }else if(normaliseAnswer(input.value) !== ''){
-      fb.innerHTML = '<span aria-hidden="true">&#9888;</span> Try again — the answer is "'+readClocks[i].answer[0]+'".';
+      fb.innerHTML = '<span aria-hidden="true">&#9888;</span> Good try! The answer is "'+readClocks[i].answer[0]+'". Try again.';
       fb.className = 'feedback-inline no';
       input.style.borderColor = 'var(--yellow)';
     }else{
@@ -838,7 +859,7 @@ function checkReadClocks(){
       input.style.borderColor = '';
     }
   }
-  announce(okCount+' of '+readClocks.length+' clock answers correct.');
+  announce('You got '+okCount+' of '+readClocks.length+' correct. Keep going!');
   saveState();
 }
 renderReadClocks();
@@ -880,11 +901,11 @@ function choosePhrase(i,j){
   if(j === item.correct){
     chosenBtn.classList.add('is-correct');
     chosenBtn.innerHTML = item.options[j] + ' <span class="result-icon" aria-hidden="true">&#10003;</span>';
-    announce('Correct.');
+    announce('Correct! Well done.');
   }else{
     chosenBtn.classList.add('is-wrong');
     chosenBtn.innerHTML = item.options[j] + ' <span class="result-icon" aria-hidden="true">&#10007;</span>';
-    announce('Not correct. Try again.');
+    announce('Good try! Choose again.');
   }
   saveState();
 }
@@ -930,10 +951,10 @@ function chooseBlank(i,j){
   textSpan.textContent = (i+1)+'. '+it.pre+' '+chosen+' '+it.post;
   if(chosen === it.correct){
     chosenBtn.classList.add('is-correct');
-    announce('Correct.');
+    announce('Correct! Well done.');
   }else{
     chosenBtn.classList.add('is-wrong');
-    announce('Not correct. Try again.');
+    announce('Good try! Choose again.');
   }
   saveState();
 }
@@ -994,12 +1015,12 @@ function selectA(i){
     aBtn.setAttribute('aria-disabled','true'); aBtn.disabled = true;
     STATE.matchPairs[i] = true;
     matchSelectedQ = null;
-    if(allMatched()){ announce('All matches are correct.'); }
-    else { announce('Correct match.'); }
+    if(allMatched()){ announce('Great! All matches are correct.'); }
+    else { announce('Correct match! Well done.'); }
     saveState();
   }else{
     aBtn.classList.add('wrongflash');
-    announce('Not a match. Try again.');
+    announce('Good try! Not a match. Try again.');
     window.setTimeout(function(){ aBtn.classList.remove('wrongflash'); }, 600);
     /* keep the question selected so the learner can try another answer */
     document.getElementById('mq'+matchSelectedQ).setAttribute('aria-pressed','true');
@@ -1020,15 +1041,15 @@ function checkCorrectSentence(){
   var ok = answerMatches(input.value, CORRECT_830);
   STATE.correctSentenceCorrect = ok;
   if(ok){
-    fb.innerHTML = '<span aria-hidden="true">&#10003;</span> Correct!';
+    fb.innerHTML = '<span aria-hidden="true">&#10003;</span> Correct! Well done.';
     fb.className = 'feedback-inline ok';
     input.style.borderColor = 'var(--green)';
-    announce('Correct.');
+    announce('Correct! Well done.');
   }else{
-    fb.innerHTML = '<span aria-hidden="true">&#9888;</span> Try again \u2014 the answer is \u201cIt\'s half past eight.\u201d';
+    fb.innerHTML = '<span aria-hidden="true">&#9888;</span> Good try! The answer is \u201cIt\'s half past eight.\u201d Try again.';
     fb.className = 'feedback-inline no';
     input.style.borderColor = 'var(--yellow)';
-    announce('Not correct. Try again.');
+    announce('Good try! Try again.');
   }
   saveState();
 }
@@ -1199,11 +1220,11 @@ function restoreIntoDOM(){
       var ok = answerMatches(savedVal, readClocks[i].answer);
       STATE.readClocksCorrect[i] = ok;
       if(ok){
-        fbEl.innerHTML = '<span aria-hidden="true">&#10003;</span> Correct';
+        fbEl.innerHTML = '<span aria-hidden="true">&#10003;</span> Correct! Well done.';
         fbEl.className = 'feedback-inline ok';
         document.getElementById('rc'+i).style.borderColor = 'var(--green)';
       }else{
-        fbEl.innerHTML = '<span aria-hidden="true">&#9888;</span> Try again — the answer is "'+readClocks[i].answer[0]+'".';
+        fbEl.innerHTML = '<span aria-hidden="true">&#9888;</span> Good try! The answer is "'+readClocks[i].answer[0]+'". Try again.';
         fbEl.className = 'feedback-inline no';
         document.getElementById('rc'+i).style.borderColor = 'var(--yellow)';
       }
@@ -1300,9 +1321,34 @@ function getIncompleteList(){
   }
   return missing;
 }
-function showIncompleteSummary(missing){
+/* Every activity on every screen must be filled in before the learner can carry on —
+   nothing is optional. This checks only "filled in", not correctness; the deeper
+   correctness requirements for the auto-corrected items are enforced by
+   getIncompleteList() at Finish, further down the lesson. */
+/* Only the auto-corrected / required-by-design activities ever block "Carry on":
+   screens 0, 2's everyday-time, 4's schedule sentence, 5's fictional-hours, and 6 (Speaking)
+   are optional practice and must never be required here. */
+function getScreenIncomplete(screenIndex){
+  var missing = [];
+  var notEmpty = function(v){ return String(v||'').trim() !== ''; };
+  if(screenIndex === 2){
+    if(!STATE.readClocks.every(notEmpty)) missing.push('Write an answer for all 6 clocks.');
+    if(!STATE.phrase.every(function(v){ return v !== null; })) missing.push('Choose an answer for all 4 phrases.');
+  }else if(screenIndex === 3){
+    if(!STATE.fillBlanks.every(function(v){ return v !== null; })) missing.push('Choose an answer for all 4 blanks.');
+    if(!STATE.matchPairs.every(function(v){ return v; })) missing.push('Match all 4 questions to their answers.');
+    if(!notEmpty(STATE.correctSentence)) missing.push('Write the correct sentence for 8:30.');
+  }else if(screenIndex === 4){
+    if(!STATE.scheduleAnswers.every(notEmpty)) missing.push('Answer all 5 schedule questions.');
+  }else if(screenIndex === 5){
+    if(!STATE.shopAnswers.every(notEmpty)) missing.push('Answer all 4 shop questions.');
+  }
+  return missing;
+
+}
+function showIncompleteSummary(missing, heading){
   var el = document.getElementById('incompleteSummary');
-  var html = '<h3>Please complete the following before finishing:</h3><ul>';
+  var html = '<h3>'+(heading || "You're almost done! Please complete the following before finishing:")+'</h3><ul>';
   missing.forEach(function(m){ html += '<li>'+m+'</li>'; });
   html += '</ul>';
   el.innerHTML = html;
@@ -1377,47 +1423,63 @@ function showScreen(i, opts){
 function goBack(){
   if(current > 0){ showScreen(current-1); }
 }
-var lastCompletionOk = false;
-function classifyCompletionMessage(saveResult, completionOk){
+/* The ONLY place completion messages are decided — always from live flags
+   (lmsCompletionConfirmed / standaloneCompletionConfirmed / STATE.completed),
+   never from a passed-in or hard-coded result object. */
+function currentCompletionStatus(isRestore){
   if(scormAPI && scormInitialized){
-    if(completionOk){ return 'Lesson completed and saved in Moodle.'; }
-    if(saveResult.localOk){ return 'Your work was saved on this device, but Moodle could not confirm completion.'; }
-    return 'The lesson is complete, but your progress could not be saved. Please try again before closing this page.';
+    if(lmsCompletionConfirmed === true){
+      return { msg: 'Lesson completed and saved in Moodle.', warn: false };
+    }
+    if(isRestore){
+      /* reopening the lesson: suspend/local data may say completed, but this session's
+         fresh read of the real LMS status does not confirm it (or couldn't be read at all) */
+      return { msg: 'Your previous work was restored, but Moodle has not confirmed completion. Please try saving again.', warn: true };
+    }
+    if(lmsCompletionConfirmed === false){
+      return { msg: 'Your work was saved on this device, but Moodle could not confirm completion.', warn: true };
+    }
+    /* lmsCompletionConfirmed === null: status could not be verified */
+    return { msg: 'Your previous work was restored, but Moodle has not confirmed completion. Please try saving again.', warn: true };
   }
-  if(saveResult.localOk){ return 'Lesson completed and saved on this device.'; }
-  return 'The lesson is complete, but your progress could not be saved. Please try again before closing this page.';
+  if(standaloneCompletionConfirmed){
+    return { msg: 'Lesson completed and saved on this device.', warn: false };
+  }
+  return { msg: 'The lesson is complete, but your progress could not be saved. Please try again before closing this page.', warn: true };
 }
-function renderCompletionStatus(saveResult, completionOk, freshAttempt){
+function renderCompletionStatus(freshAttempt){
   var statusEl = document.getElementById('completionStatus');
   var retryWrap = document.getElementById('retrySaveWrap');
-  var msg = classifyCompletionMessage(saveResult, completionOk);
-  statusEl.textContent = msg;
-  var needsRetry = !saveResult.anyOk || (scormAPI && scormInitialized && !completionOk);
-  statusEl.className = needsRetry ? 'status-warn' : 'status-ok';
-  retryWrap.hidden = !needsRetry;
-  if(freshAttempt){ announce(msg); }
+  var result = currentCompletionStatus(!freshAttempt);
+  statusEl.textContent = result.msg;
+  statusEl.className = result.warn ? 'status-warn' : 'status-ok';
+  retryWrap.hidden = !result.warn;
+  if(freshAttempt){ announce(result.msg); }
 }
+/* Runs (and re-runs, from the retry button) the actual save + completion-report operations,
+   checks their real return values, and only ever sets STATE.completed=true once genuinely
+   confirmed. Never assumes success. Safe to call repeatedly without erasing progress. */
 function attemptCompletion(){
-  STATE.completed = true;
-  var saveResult = saveState();
-  var completionOk = false;
+  saveState(); /* persist current progress first, before touching the completed flag */
   if(scormAPI && scormInitialized){
-    completionOk = scormMarkComplete();
-    if(completionOk){ saveResult = saveState(); } /* persist the now-confirmed completion flag too */
+    var completionOk = scormMarkComplete();
+    lmsCompletionConfirmed = completionOk;
+    if(completionOk){
+      STATE.completed = true;
+    }
+    saveState(); /* persist the (possibly still-false) completed flag alongside everything else */
+  }else{
+    STATE.completed = true;
+    var result = saveState();
+    standaloneCompletionConfirmed = !!result.localOk;
+    if(!standaloneCompletionConfirmed){
+      STATE.completed = false; /* do not claim/persist a completion that was never verified as saved */
+    }
   }
-  lastCompletionOk = completionOk;
-  renderCompletionStatus(saveResult, completionOk, true);
+  renderCompletionStatus(true);
 }
 document.getElementById('retrySaveBtn').addEventListener('click', function(){
-  /* retry repeats BOTH the state save and the completion report; learner's in-memory work is untouched */
-  var saveResult = saveState();
-  var completionOk = lastCompletionOk;
-  if(scormAPI && scormInitialized){
-    completionOk = scormMarkComplete();
-    if(completionOk){ saveResult = saveState(); }
-  }
-  lastCompletionOk = completionOk;
-  renderCompletionStatus(saveResult, completionOk, true);
+  attemptCompletion();
 });
 function goNext(){
   clearIncompleteSummary();
@@ -1425,19 +1487,26 @@ function goNext(){
     /* Finish button pressed on final learning screen */
     var missing = getIncompleteList();
     if(missing.length > 0){
-      showIncompleteSummary(missing);
-      announce('Some activities are not finished yet.');
+      showIncompleteSummary(missing, "You're almost done! Please complete the following before finishing:");
+      announce("You're doing well! Please finish the activities above before you finish the lesson.");
       return; /* stay on the review screen: Done is shown only once local requirements are met */
     }
     showScreen(totalContentSteps); /* local activity requirements satisfied: show Done */
     if(!STATE.completed){
       attemptCompletion();
     }else{
-      renderCompletionStatus({ scormOk:false, localOk:true, anyOk:true, mode:(scormAPI&&scormInitialized)?'scorm':'standalone' }, lastCompletionOk, false);
+      renderCompletionStatus(false); /* already completed earlier: show the current real status, never a guessed one */
     }
     return;
   }
   if(current < totalContentSteps){
+    /* required activities must be filled in before moving on; optional practice never blocks this */
+    var screenMissing = getScreenIncomplete(current);
+    if(screenMissing.length > 0){
+      showIncompleteSummary(screenMissing, "Good work so far! Please answer before you carry on:");
+      announce('Please answer above before you carry on. You can do it!');
+      return;
+    }
     showScreen(current+1);
   }
   /* screen totalContentSteps (Done) is the last; do nothing further */
@@ -1447,22 +1516,23 @@ document.getElementById('navBtn').addEventListener('click', goNext);
 
 /* ================= boot ================= */
 function boot(){
-  initScorm();
+  initScorm(); /* sets lmsCompletionConfirmed from the real LMS status, if a SCORM API is present */
   var saved = loadSavedState();
   mergeState(saved);
   restoreIntoDOM();
   var startScreen = (typeof STATE.screen === 'number' && STATE.screen >= 0 && STATE.screen <= totalContentSteps) ? STATE.screen : 0;
   showScreen(startScreen, {silent:true});
-  if(STATE.completed){
+  if(!(scormAPI && scormInitialized) && STATE.completed){
+    /* Standalone mode: successfully reading a completed record back out of localStorage
+       right now IS the verification for this device — no SCORM to defer to. */
+    standaloneCompletionConfirmed = true;
+  }
+  if(STATE.completed || lmsCompletionConfirmed === true){
     var navBtn = document.getElementById('navBtn');
     if(startScreen === totalContentSteps){
       navBtn.textContent = 'Done \u2713';
       navBtn.disabled = true;
-      /* landing here from restored state: neutral message, not a fresh save/completion claim */
-      var statusEl = document.getElementById('completionStatus');
-      statusEl.textContent = 'This lesson is already marked complete.';
-      statusEl.className = 'status-ok';
-      document.getElementById('retrySaveWrap').hidden = true;
+      renderCompletionStatus(false); /* accurate status from live flags, never a stale/fake one */
     }
   }
 }
