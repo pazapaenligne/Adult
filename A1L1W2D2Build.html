@@ -156,11 +156,10 @@
   #incompleteSummary.show{display:block;background:#FFF6DF;border:2px solid var(--yellow);border-radius:12px;padding:14px 18px;margin:14px 0;}
   #incompleteSummary h3{margin-top:0;}
   #incompleteSummary ul{margin:6px 0 0;padding-left:20px;}
-  .save-note{font-size:.8rem;color:#7a7a78;font-style:italic;margin-top:14px;}
-  .optional-note{font-size:.8rem;color:#7a7a78;font-style:italic;margin-top:8px;}
   .status-ok{color:#2E7D32;}
   .status-warn{color:#8a3a00;}
   #retrySaveWrap{margin-top:10px;}
+  .optional-note{font-size:.8rem;color:#7a7a78;font-style:italic;margin-top:8px;}
   @media (max-width:560px){
     .match-wrap{flex-direction:column;}
     .qa-row{flex-direction:column;gap:2px;}
@@ -203,7 +202,6 @@
     </div>
     <div class="card note-yellow">
       <span class="field-label" id="openerSentenceLabel">My useful time sentence</span>
-      <p class="optional-note">Optional practice — this activity does not affect lesson completion.</p>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <span>The</span>
         <label for="openerActivity" class="sr-only">My useful time sentence: activity</label>
@@ -420,7 +418,6 @@
         <b>After the lesson</b><br>Write or record five times and match each time to an activity.
       </div>
     </div>
-    <p class="save-note">Real Moodle save/restore behaviour still needs to be confirmed with a live upload-and-refresh test in your Moodle course.</p>
   </section>
 
   <!-- SCREEN 8 : Done -->
@@ -433,6 +430,7 @@
       <div id="retrySaveWrap" hidden>
         <button type="button" class="check-btn" id="retrySaveBtn">Try saving again</button>
       </div>
+      <button type="button" class="back-btn" id="tryAgainBtn" style="margin-top:18px;">Try again</button>
     </div>
   </section>
 
@@ -500,214 +498,13 @@ var DEFAULT_STATE = {
 };
 var STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
 
-/* ================= SCORM (1.2 and 2004) ================= */
-var scormAPI = null, scormVersion = null, scormInitialized = false;
-var sessionEnded = false;
-/* lmsCompletionConfirmed: null = unknown/not yet checked, true = LMS confirms completed/passed,
-   false = LMS explicitly reports not completed (or a completion attempt explicitly failed).
-   This is the ONLY source of truth for "Moodle confirmed completion" — never inferred from
-   local storage or suspend_data. */
-var lmsCompletionConfirmed = null;
-/* standaloneCompletionConfirmed: true only once a completed state has been verified as
-   successfully written to (and read back from) localStorage, with no SCORM API active. */
+/* ================= persistence (standalone browser storage only — no SCORM/Moodle) =================
+   This activity works entirely as a standalone HTML file. State is saved to and restored
+   from localStorage on this device/browser only; there is no LMS communication of any kind.
+   saveState() returns a structured result rather than silently assuming success: a write is
+   only counted as successful if reading the value straight back matches what was written. */
 var standaloneCompletionConfirmed = false;
 
-/* Only boolean true or string "true" count as SCORM success. */
-function isScormSuccess(value){
-  return value === true || value === 'true';
-}
-
-function findScormAPI(win, depth){
-  if(!win || depth > 7) return null;
-  try{
-    if(win.API) return { api: win.API, version: '1.2' };
-    if(win.API_1484_11) return { api: win.API_1484_11, version: '2004' };
-  }catch(e){ /* cross-origin: ignore and keep searching */ }
-  try{
-    if(win.parent && win.parent !== win){
-      var f1 = findScormAPI(win.parent, depth+1);
-      if(f1) return f1;
-    }
-  }catch(e){}
-  try{
-    if(win.opener && win.opener !== win){
-      var f2 = findScormAPI(win.opener, depth+1);
-      if(f2) return f2;
-    }
-  }catch(e){}
-  return null;
-}
-
-function initScorm(){
-  try{
-    var found = findScormAPI(window, 0);
-    if(!found) return;
-    scormAPI = found.api;
-    scormVersion = found.version;
-    var ok = false;
-    try{
-      ok = isScormSuccess(scormVersion === '1.2' ? scormAPI.LMSInitialize('') : scormAPI.Initialize(''));
-    }catch(e){ ok = false; }
-    scormInitialized = ok;
-    if(!scormInitialized) return;
-
-    if(scormVersion === '1.2'){
-      try{
-        var status = scormAPI.LMSGetValue('cmi.core.lesson_status');
-        if(status === 'completed' || status === 'passed'){
-          lmsCompletionConfirmed = true;
-        }else if(status){
-          lmsCompletionConfirmed = false;
-        } /* else leave as null (unknown) */
-        /* only fill in a blank/not-attempted status; never touch completed, passed, incomplete, etc. */
-        if(!status || status === 'not attempted'){
-          var setOk = isScormSuccess(scormAPI.LMSSetValue('cmi.core.lesson_status', 'incomplete'));
-          var commitOk = isScormSuccess(scormAPI.LMSCommit(''));
-          if(!(setOk && commitOk)){
-            try{ console.warn('Pazapa lesson: could not initialise SCORM 1.2 lesson_status.'); }catch(e2){}
-          }
-          lmsCompletionConfirmed = false;
-        }
-      }catch(e){ lmsCompletionConfirmed = null; }
-    }else{
-      try{
-        var status2004 = scormAPI.GetValue('cmi.completion_status');
-        if(status2004 === 'completed'){
-          lmsCompletionConfirmed = true;
-        }else if(status2004 && status2004 !== 'unknown'){
-          lmsCompletionConfirmed = false;
-        } /* else leave as null (unknown) */
-        if(!status2004 || status2004 === 'unknown' || status2004 === 'not attempted'){
-          var setOk2 = isScormSuccess(scormAPI.SetValue('cmi.completion_status', 'incomplete'));
-          var commitOk2 = isScormSuccess(scormAPI.Commit(''));
-          if(!(setOk2 && commitOk2)){
-            try{ console.warn('Pazapa lesson: could not initialise SCORM 2004 completion_status.'); }catch(e2){}
-          }
-          lmsCompletionConfirmed = false;
-        }
-      }catch(e){ lmsCompletionConfirmed = null; }
-    }
-  }catch(e){
-    scormAPI = null; scormInitialized = false;
-  }
-}
-
-function scormLoadSuspendData(){
-  if(!(scormAPI && scormInitialized)) return null;
-  try{
-    var raw = (scormVersion === '1.2')
-      ? scormAPI.LMSGetValue('cmi.suspend_data')
-      : scormAPI.GetValue('cmi.suspend_data');
-    return raw || null;
-  }catch(e){ return null; }
-}
-
-/* ---- compact SCORM 1.2 payload (kept safely under the 4096-char suspend_data limit) ----
-   Free-text answers are not graded for exact wording, only checked for completion, so the
-   compact SCORM 1.2 payload stores completion/correctness flags rather than raw text. The
-   full text is preserved in localStorage; SCORM 2004 (typically a much larger limit) stores
-   the complete state instead. */
-function bitsFrom(arr, mapFn){ return arr.map(mapFn).join(''); }
-var REFLECTION_CODE = { yes:'y', almost:'a', notyet:'n' };
-var REFLECTION_DECODE = { y:'yes', a:'almost', n:'notyet' };
-
-function buildCompactState(){
-  return {
-    scr: STATE.screen,
-    cmp: STATE.completed ? 1 : 0,
-    rcc: bitsFrom(STATE.readClocksCorrect, function(v){ return v ? '1' : '0'; }),
-    phs: bitsFrom(STATE.phrase, function(v){ return v===null ? '-' : String(v); }),
-    phc: bitsFrom(STATE.phraseCorrect, function(v){ return v ? '1' : '0'; }),
-    fbs: bitsFrom(STATE.fillBlanks, function(v){ return v===null ? '-' : String(BLANK_OPTIONS.indexOf(v)); }),
-    fbc: bitsFrom(STATE.fillBlanksCorrect, function(v){ return v ? '1' : '0'; }),
-    mp: bitsFrom(STATE.matchPairs, function(v){ return v ? '1' : '0'; }),
-    cs: STATE.correctSentenceCorrect ? 1 : 0,
-    sqa: bitsFrom(STATE.scheduleAnswers, function(v){ return String(v||'').trim()!=='' ? '1' : '0'; }),
-    sha: bitsFrom(STATE.shopAnswers, function(v){ return String(v||'').trim()!=='' ? '1' : '0'; }),
-    sta: bitsFrom(STATE.scheduleTable, function(v){ return String(v||'').trim()!=='' ? '1' : '0'; }),
-    chk: bitsFrom(STATE.checklist, function(v){ return v ? '1' : '0'; }),
-    ref: bitsFrom(STATE.reflection, function(v){ return REFLECTION_CODE[v] || '0'; })
-  };
-}
-function expandCompactState(c){
-  var expanded = JSON.parse(JSON.stringify(DEFAULT_STATE));
-  expanded.screen = (typeof c.scr === 'number') ? c.scr : 0;
-  expanded.completed = !!c.cmp;
-  expanded.readClocksCorrect = String(c.rcc||'000000').split('').map(function(ch){ return ch==='1'; });
-  expanded.phrase = String(c.phs||'----').split('').map(function(ch){ return ch==='-' ? null : parseInt(ch,10); });
-  expanded.phraseCorrect = String(c.phc||'0000').split('').map(function(ch){ return ch==='1'; });
-  expanded.fillBlanks = String(c.fbs||'----').split('').map(function(ch){ return ch==='-' ? null : BLANK_OPTIONS[parseInt(ch,10)]; });
-  expanded.fillBlanksCorrect = String(c.fbc||'0000').split('').map(function(ch){ return ch==='1'; });
-  expanded.matchPairs = String(c.mp||'0000').split('').map(function(ch){ return ch==='1'; });
-  expanded.correctSentenceCorrect = !!c.cs;
-  /* attempted-only placeholders: real text lives in localStorage, not in the compact SCORM payload */
-  expanded.scheduleAnswers = String(c.sqa||'00000').split('').map(function(ch){ return ch==='1' ? '\u2713' : ''; });
-  expanded.shopAnswers = String(c.sha||'0000').split('').map(function(ch){ return ch==='1' ? '\u2713' : ''; });
-  expanded.scheduleTable = String(c.sta||'000000000000').split('').map(function(ch){ return ch==='1' ? '\u2713' : ''; });
-  expanded.checklist = String(c.chk||'00000').split('').map(function(ch){ return ch==='1'; });
-  expanded.reflection = String(c.ref||'00000').split('').map(function(ch){ return REFLECTION_DECODE[ch] || null; });
-  return expanded;
-}
-/* Returns the string to send to SCORM 1.2, guaranteed <= 4096 chars, never cut mid-JSON. */
-function serializeForScorm12(){
-  var compact = buildCompactState();
-  var str = JSON.stringify(compact);
-  if(str.length <= 4096) return str;
-  var essential = { scr: compact.scr, cmp: compact.cmp, mp: compact.mp, cs: compact.cs };
-  var strEssential = JSON.stringify(essential);
-  try{ console.warn('Pazapa lesson: state exceeds the SCORM 1.2 suspend_data limit; saving completion state only. Full state remains in local storage.'); }catch(e){}
-  return strEssential;
-}
-
-function scormSave(screenIndex){
-  if(!(scormAPI && scormInitialized)) return false;
-  try{
-    if(scormVersion === '1.2'){
-      var payloadStr = serializeForScorm12();
-      var r1 = scormAPI.LMSSetValue('cmi.suspend_data', payloadStr);
-      var r2 = scormAPI.LMSSetValue('cmi.core.lesson_location', String(screenIndex));
-      var r3 = scormAPI.LMSCommit('');
-      return isScormSuccess(r1) && isScormSuccess(r2) && isScormSuccess(r3);
-    }else{
-      var fullStr = JSON.stringify(STATE);
-      var r1b = scormAPI.SetValue('cmi.suspend_data', fullStr);
-      var r2b = scormAPI.SetValue('cmi.location', String(screenIndex));
-      var r3b = scormAPI.Commit('');
-      return isScormSuccess(r1b) && isScormSuccess(r2b) && isScormSuccess(r3b);
-    }
-  }catch(e){ return false; }
-}
-
-function scormMarkComplete(){
-  if(!(scormAPI && scormInitialized)) return false;
-  try{
-    if(scormVersion === '1.2'){
-      var r1 = scormAPI.LMSSetValue('cmi.core.lesson_status', 'completed');
-      var r2 = scormAPI.LMSCommit('');
-      return isScormSuccess(r1) && isScormSuccess(r2);
-    }else{
-      var r1b = scormAPI.SetValue('cmi.completion_status', 'completed');
-      var r2b = scormAPI.Commit('');
-      return isScormSuccess(r1b) && isScormSuccess(r2b);
-    }
-  }catch(e){ return false; }
-}
-
-function scormFinish(){
-  if(sessionEnded) return true; /* never terminate twice */
-  if(!(scormAPI && scormInitialized)){ sessionEnded = true; return false; }
-  try{
-    var r = (scormVersion === '1.2') ? scormAPI.LMSFinish('') : scormAPI.Terminate('');
-    sessionEnded = true;
-    return isScormSuccess(r);
-  }catch(e){ sessionEnded = true; return false; }
-}
-
-/* ================= persistence (progressive: SCORM, then localStorage, then defaults) =================
-   saveState() returns a structured result rather than silently assuming success anywhere. A
-   localStorage write is only counted as successful if reading the value straight back matches
-   what was written. SCORM success is only ever based on isScormSuccess() of the actual return
-   values, never merely "no exception was thrown". */
 function saveLocalStorage(str){
   try{
     localStorage.setItem(LESSON_KEY, str);
@@ -719,47 +516,16 @@ function saveState(){
   var fullStr;
   try{ fullStr = JSON.stringify(STATE); }catch(e){ fullStr = null; }
   var localOk = fullStr ? saveLocalStorage(fullStr) : false;
-  var scormSuccessful = scormSave(STATE.screen);
-  var result = {
-    scormOk: scormSuccessful,
-    localOk: localOk,
-    anyOk: scormSuccessful || localOk,
-    mode: (scormAPI && scormInitialized) ? 'scorm' : 'standalone'
-  };
-  return result;
+  return { localOk: localOk, anyOk: localOk };
 }
 
 function loadSavedState(){
-  /* Priority: valid SCORM suspend data, then local storage, then defaults (handled by caller).
-     Where both exist, SCORM is authoritative for completion/correctness (it is the record of
-     truth for the LMS) while local storage supplies the richer free-text the compact SCORM
-     1.2 payload cannot hold. */
-  var localState = null;
   try{
-    var localRaw = localStorage.getItem(LESSON_KEY);
-    if(localRaw) localState = JSON.parse(localRaw);
-  }catch(e){ localState = null; }
-
-  var scormState = null;
-  var scormRaw = scormLoadSuspendData();
-  if(scormRaw){
-    try{
-      var parsedRaw = JSON.parse(scormRaw);
-      scormState = (scormVersion === '1.2') ? expandCompactState(parsedRaw) : parsedRaw;
-    }catch(e){ scormState = null; }
-  }
-
-  if(scormState && localState){
-    var merged = localState;
-    merged.completed = scormState.completed || merged.completed;
-    merged.readClocksCorrect = scormState.readClocksCorrect;
-    merged.phraseCorrect = scormState.phraseCorrect;
-    merged.fillBlanksCorrect = scormState.fillBlanksCorrect;
-    merged.matchPairs = scormState.matchPairs;
-    merged.correctSentenceCorrect = scormState.correctSentenceCorrect || merged.correctSentenceCorrect;
-    return merged;
-  }
-  return scormState || localState || null; /* falls through to DEFAULT_STATE if both are null */
+    var raw = localStorage.getItem(LESSON_KEY);
+    if(!raw) return null;
+    var parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === 'object') ? parsed : null;
+  }catch(e){ return null; }
 }
 
 function mergeState(saved){
@@ -771,7 +537,6 @@ function mergeState(saved){
   }
 }
 
-/* ================= clock drawing ================= */
 function clockSVG(hour, minute){
 
   var cx=70, cy=70, r=62;
@@ -1328,16 +1093,26 @@ function getIncompleteList(){
 /* Only the auto-corrected / required-by-design activities ever block "Carry on":
    screens 0, 2's everyday-time, 4's schedule sentence, 5's fictional-hours, and 6 (Speaking)
    are optional practice and must never be required here. */
+/* Every activity on every screen must be completed before the learner can carry on —
+   nothing in this lesson is optional. */
+/* Per-screen gate: only the auto-corrected / required-by-design activities ever block
+   "Carry on". Screens 0, 2's everyday-time, 4's schedule sentence, 5's fictional-hours,
+   and 6 (Speaking) are optional practice and are never checked here. Screens 2 and 3
+   gate on CORRECTNESS (not merely "attempted") so a learner can't advance by picking a
+   wrong answer — full correctness is required for these auto-corrected items. */
 function getScreenIncomplete(screenIndex){
   var missing = [];
   var notEmpty = function(v){ return String(v||'').trim() !== ''; };
-  if(screenIndex === 2){
-    if(!STATE.readClocks.every(notEmpty)) missing.push('Write an answer for all 6 clocks.');
-    if(!STATE.phrase.every(function(v){ return v !== null; })) missing.push('Choose an answer for all 4 phrases.');
+  if(screenIndex === 0){
+    if(!notEmpty(STATE.opener.activity)) missing.push('Write the activity in your useful time sentence.');
+    if(!notEmpty(STATE.opener.time)) missing.push('Write the time in your useful time sentence.');
+  }else if(screenIndex === 2){
+    if(!STATE.readClocksCorrect.every(function(v){ return v === true; })) missing.push('Answer all 6 clocks correctly.');
+    if(!STATE.phraseCorrect.every(function(v){ return v === true; })) missing.push('Choose the correct answer for all 4 phrases.');
   }else if(screenIndex === 3){
-    if(!STATE.fillBlanks.every(function(v){ return v !== null; })) missing.push('Choose an answer for all 4 blanks.');
-    if(!STATE.matchPairs.every(function(v){ return v; })) missing.push('Match all 4 questions to their answers.');
-    if(!notEmpty(STATE.correctSentence)) missing.push('Write the correct sentence for 8:30.');
+    if(!STATE.fillBlanksCorrect.every(function(v){ return v === true; })) missing.push('Choose the correct answer for all 4 blanks.');
+    if(!STATE.matchPairs.every(function(v){ return v; })) missing.push('Match all 4 questions to their answers correctly.');
+    if(!STATE.correctSentenceCorrect) missing.push('Write the correct sentence for 8:30.');
   }else if(screenIndex === 4){
     if(!STATE.scheduleAnswers.every(notEmpty)) missing.push('Answer all 5 schedule questions.');
   }else if(screenIndex === 5){
@@ -1423,27 +1198,13 @@ function showScreen(i, opts){
 function goBack(){
   if(current > 0){ showScreen(current-1); }
 }
-/* The ONLY place completion messages are decided — always from live flags
-   (lmsCompletionConfirmed / standaloneCompletionConfirmed / STATE.completed),
-   never from a passed-in or hard-coded result object. */
+/* The ONLY place completion messages are decided — always from the live
+   standaloneCompletionConfirmed flag, never from a hard-coded result. */
 function currentCompletionStatus(isRestore){
-  if(scormAPI && scormInitialized){
-    if(lmsCompletionConfirmed === true){
-      return { msg: 'Lesson completed and saved in Moodle.', warn: false };
-    }
-    if(isRestore){
-      /* reopening the lesson: suspend/local data may say completed, but this session's
-         fresh read of the real LMS status does not confirm it (or couldn't be read at all) */
-      return { msg: 'Your previous work was restored, but Moodle has not confirmed completion. Please try saving again.', warn: true };
-    }
-    if(lmsCompletionConfirmed === false){
-      return { msg: 'Your work was saved on this device, but Moodle could not confirm completion.', warn: true };
-    }
-    /* lmsCompletionConfirmed === null: status could not be verified */
-    return { msg: 'Your previous work was restored, but Moodle has not confirmed completion. Please try saving again.', warn: true };
-  }
   if(standaloneCompletionConfirmed){
-    return { msg: 'Lesson completed and saved on this device.', warn: false };
+    return isRestore
+      ? { msg: 'This lesson is already marked complete on this device.', warn: false }
+      : { msg: 'Lesson completed and saved on this device.', warn: false };
   }
   return { msg: 'The lesson is complete, but your progress could not be saved. Please try again before closing this page.', warn: true };
 }
@@ -1456,31 +1217,53 @@ function renderCompletionStatus(freshAttempt){
   retryWrap.hidden = !result.warn;
   if(freshAttempt){ announce(result.msg); }
 }
-/* Runs (and re-runs, from the retry button) the actual save + completion-report operations,
-   checks their real return values, and only ever sets STATE.completed=true once genuinely
-   confirmed. Never assumes success. Safe to call repeatedly without erasing progress. */
+/* Runs (and re-runs, from the retry button) the actual save, checks its real return value,
+   and only ever sets STATE.completed=true once the local save is genuinely verified.
+   Never assumes success. Safe to call repeatedly without erasing progress. */
 function attemptCompletion(){
-  saveState(); /* persist current progress first, before touching the completed flag */
-  if(scormAPI && scormInitialized){
-    var completionOk = scormMarkComplete();
-    lmsCompletionConfirmed = completionOk;
-    if(completionOk){
-      STATE.completed = true;
-    }
-    saveState(); /* persist the (possibly still-false) completed flag alongside everything else */
-  }else{
-    STATE.completed = true;
-    var result = saveState();
-    standaloneCompletionConfirmed = !!result.localOk;
-    if(!standaloneCompletionConfirmed){
-      STATE.completed = false; /* do not claim/persist a completion that was never verified as saved */
-    }
+  STATE.completed = true;
+  var result = saveState();
+  standaloneCompletionConfirmed = !!result.localOk;
+  if(!standaloneCompletionConfirmed){
+    STATE.completed = false; /* do not claim/persist a completion that was never verified as saved */
   }
   renderCompletionStatus(true);
 }
 document.getElementById('retrySaveBtn').addEventListener('click', function(){
   attemptCompletion();
 });
+/* "Try again": lets the learner redo the exercises from the start. This resets the
+   in-lesson answers only — it never touches the real LMS completion status, so a
+   learner revisiting for practice can't accidentally undo a grade already recorded
+   in Moodle. */
+function resetLesson(){
+  STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  renderReadClocks();
+  renderChoosePhrase();
+  renderFillBlanks();
+  matchAOrderIdx = [];
+  renderMatch();
+  var cs = document.getElementById('correctSentence');
+  cs.value = '';
+  cs.style.borderColor = '';
+  document.getElementById('correctSentenceFeedback').textContent = '';
+  renderQAWithReveal('scheduleQA', scheduleQuestions, 'sq', 'scheduleAnswers');
+  renderQAWithReveal('shopQA', shopQuestions, 'sh', 'shopAnswers');
+  renderScheduleTable();
+  renderReflection();
+  ['openerActivity','openerTime','everydayTime','scheduleSentence','fictPlace','fictOpens','fictCloses','fictSentence',
+   'spkStart','spkFinish','spkAppt','spkOpen','spkClose'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  for(var c=0;c<5;c++){ document.getElementById('chk'+c).checked = false; }
+  document.getElementById('completionStatus').textContent = '';
+  document.getElementById('retrySaveWrap').hidden = true;
+  clearIncompleteSummary();
+  saveState();
+  showScreen(0);
+  announce('Starting again from the beginning.');
+}
+document.getElementById('tryAgainBtn').addEventListener('click', resetLesson);
 function goNext(){
   clearIncompleteSummary();
   if(current === totalContentSteps - 1){
@@ -1500,7 +1283,7 @@ function goNext(){
     return;
   }
   if(current < totalContentSteps){
-    /* required activities must be filled in before moving on; optional practice never blocks this */
+    /* the required, auto-corrected activities on this screen must be answered correctly before moving on; optional practice never blocks this */
     var screenMissing = getScreenIncomplete(current);
     if(screenMissing.length > 0){
       showIncompleteSummary(screenMissing, "Good work so far! Please answer before you carry on:");
@@ -1516,23 +1299,20 @@ document.getElementById('navBtn').addEventListener('click', goNext);
 
 /* ================= boot ================= */
 function boot(){
-  initScorm(); /* sets lmsCompletionConfirmed from the real LMS status, if a SCORM API is present */
   var saved = loadSavedState();
   mergeState(saved);
   restoreIntoDOM();
   var startScreen = (typeof STATE.screen === 'number' && STATE.screen >= 0 && STATE.screen <= totalContentSteps) ? STATE.screen : 0;
   showScreen(startScreen, {silent:true});
-  if(!(scormAPI && scormInitialized) && STATE.completed){
-    /* Standalone mode: successfully reading a completed record back out of localStorage
-       right now IS the verification for this device — no SCORM to defer to. */
+  if(STATE.completed){
+    /* Successfully reading a completed record back out of localStorage right now IS the
+       verification for this device — this is a standalone activity with no LMS to defer to. */
     standaloneCompletionConfirmed = true;
-  }
-  if(STATE.completed || lmsCompletionConfirmed === true){
     var navBtn = document.getElementById('navBtn');
     if(startScreen === totalContentSteps){
       navBtn.textContent = 'Done \u2713';
       navBtn.disabled = true;
-      renderCompletionStatus(false); /* accurate status from live flags, never a stale/fake one */
+      renderCompletionStatus(false); /* accurate status from the live flag, never a stale/fake one */
     }
   }
 }
@@ -1540,7 +1320,6 @@ boot();
 
 window.addEventListener('pagehide', function(){
   saveState();
-  scormFinish();
 });
 
 })();
