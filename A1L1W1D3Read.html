@@ -30,8 +30,16 @@ Screen 2 lets the learner open each label at their own pace instead of reading a
 wall of definitions. Screen 7 asks them to place two labels onto an unlabelled
 card, which is harder and more satisfying than picking from a list.
 
-Nothing is timed, nothing is counted, wrong taps cost nothing and can be retried
-freely, and Carry on is never gated — an adult decides when to move on.
+Nothing is timed, nothing is counted, and wrong taps cost nothing and can be
+retried freely.
+
+EDIT (post-production): Carry on is now gated on each screen that asks a
+question (Screens 2 to 7) — the button stays disabled until the learner opens
+all four labels (Screen 2), finds the correct form line (Screens 3 to 5),
+chooses the correct situation (Screen 6), or matches both labels (Screen 7).
+Retrying a wrong tap is still free and untimed; only forward progress is
+held back. This reverses the original "Carry on is never gated" rule above
+at the requester's explicit instruction.
 
 ================================================================================
 
@@ -98,6 +106,8 @@ STANDING BUILD RULES OBSERVED
  - Single persistent <audio> element reused for every clip (iOS/iPadOS).
  - No autoplay. One clip at a time. Audio stopped on every screen change.
  - No Previous button. No auto-advance. Done disabled until the final screen.
+ - Carry on disabled on Screens 2–7 until that screen's question is answered
+   correctly (see EDIT note above).
  - Completion fires exactly once, guarded by a flag.
  - SCORM 2004 and 1.2. Order: Initialize → SetValue → Commit. No Terminate /
    LMSFinish call is made. Every return value is checked, because SCORM reports
@@ -786,7 +796,7 @@ button[aria-disabled="true"]{
 
     <hr class="divider">
     <div class="btnrow">
-      <button type="button" class="btn-primary" data-next="3" aria-label="Carry on to read Nadia's form">Carry on</button>
+      <button type="button" class="btn-primary" id="carryOn2" data-next="3" disabled aria-disabled="true" aria-label="Carry on to read Nadia's form. Open all four labels first.">Carry on</button>
     </div>
   </section>
 
@@ -809,7 +819,7 @@ button[aria-disabled="true"]{
 
     <hr class="divider">
     <div class="btnrow">
-      <button type="button" class="btn-primary" data-next="4" aria-label="Carry on to find the telephone number">Carry on</button>
+      <button type="button" class="btn-primary" id="carryOn3" data-next="4" disabled aria-disabled="true" aria-label="Carry on to find the telephone number. Answer the question first.">Carry on</button>
     </div>
   </section>
 
@@ -832,7 +842,7 @@ button[aria-disabled="true"]{
 
     <hr class="divider">
     <div class="btnrow">
-      <button type="button" class="btn-primary" data-next="5" aria-label="Carry on to find the email address">Carry on</button>
+      <button type="button" class="btn-primary" id="carryOn4" data-next="5" disabled aria-disabled="true" aria-label="Carry on to find the email address. Answer the question first.">Carry on</button>
     </div>
   </section>
 
@@ -855,7 +865,7 @@ button[aria-disabled="true"]{
 
     <hr class="divider">
     <div class="btnrow">
-      <button type="button" class="btn-primary" data-next="6" aria-label="Carry on to read a help note">Carry on</button>
+      <button type="button" class="btn-primary" id="carryOn5" data-next="6" disabled aria-disabled="true" aria-label="Carry on to read a help note. Answer the question first.">Carry on</button>
     </div>
   </section>
 
@@ -889,7 +899,7 @@ button[aria-disabled="true"]{
 
     <hr class="divider">
     <div class="btnrow">
-      <button type="button" class="btn-primary" data-next="7" aria-label="Carry on to check another profile">Carry on</button>
+      <button type="button" class="btn-primary" id="carryOn6" data-next="7" disabled aria-disabled="true" aria-label="Carry on to check another profile. Choose the correct answer first.">Carry on</button>
     </div>
   </section>
 
@@ -930,7 +940,7 @@ button[aria-disabled="true"]{
 
     <hr class="divider">
     <div class="btnrow">
-      <button type="button" class="btn-primary" data-next="8" aria-label="Carry on to the end of this step">Carry on</button>
+      <button type="button" class="btn-primary" id="carryOn7" data-next="8" disabled aria-disabled="true" aria-label="Carry on to the end of this step. Match both labels first.">Carry on</button>
     </div>
   </section>
 
@@ -1141,7 +1151,11 @@ button[aria-disabled="true"]{
             openedIds[btn.id] = true;
             openedCount++;
             if (openedCount === 1) { say("feedback2", "That's useful English."); }
-            else if (openedCount >= btns.length) { say("feedback2", "You're building confidence."); }
+            else if (openedCount >= btns.length) {
+              say("feedback2", "You're building confidence.");
+              var carryOn2 = document.getElementById("carryOn2");
+              if (carryOn2) { carryOn2.disabled = false; carryOn2.removeAttribute("aria-disabled"); }
+            }
           }
         });
       })(btns[i]);
@@ -1233,6 +1247,8 @@ button[aria-disabled="true"]{
       btn.setAttribute("aria-label", item.label + ": " + item.value + ". Found.");
       updateNotes();
       say(fb, allFound() ? "You're building confidence." : "Good choice.");
+      var carryOnNow = document.getElementById("carryOn" + current);
+      if (carryOnNow) { carryOnNow.disabled = false; carryOnNow.removeAttribute("aria-disabled"); }
     } else {
       btn.classList.add("wrong");
       say(fb, "Look again and try once more.", true);
@@ -1333,6 +1349,8 @@ button[aria-disabled="true"]{
             btn.disabled = false;
             btn.removeAttribute("aria-disabled");
             say("feedback6", "That's useful English.");
+            var carryOn6 = document.getElementById("carryOn6");
+            if (carryOn6) { carryOn6.disabled = false; carryOn6.removeAttribute("aria-disabled"); }
           } else {
             btn.classList.add("wrong");
             say("feedback6", "Look again and try once more.", true);
@@ -1400,7 +1418,13 @@ button[aria-disabled="true"]{
             }
             selected = null;
             placed++;
-            say("feedback7", placed >= 2 ? "You're building confidence." : "Good choice.");
+            if (placed >= 2) {
+              say("feedback7", "You're building confidence.");
+              var carryOn7 = document.getElementById("carryOn7");
+              if (carryOn7) { carryOn7.disabled = false; carryOn7.removeAttribute("aria-disabled"); }
+            } else {
+              say("feedback7", "Good choice.");
+            }
           } else {
             row.classList.add("wrong");
             say("feedback7", "Look again and try once more.", true);
@@ -1469,6 +1493,7 @@ button[aria-disabled="true"]{
     for (var i = 0; i < btns.length; i++) {
       (function (btn) {
         btn.addEventListener("click", function () {
+          if (btn.disabled) { return; }
           goTo(parseInt(btn.getAttribute("data-next"), 10));
         });
       })(btns[i]);
