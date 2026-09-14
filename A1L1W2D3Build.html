@@ -622,206 +622,13 @@
   "use strict";
 
   // ================================================================
-  // SCORM 1.2 / SCORM 2004 runtime adapter
-  // Discovers the LMS API safely, initialises the attempt at most
-  // once, locks the detected version only after a successful
-  // Initialize/LMSInitialize call, and exposes a small safe wrapper
-  // around GetValue/SetValue/Commit/Terminate plus field-mapping
-  // helpers for the specific data-model elements this lesson uses.
-  // Verified in isolation (see test_scorm_adapter.js) against mocked
-  // SCORM 1.2 and 2004 APIs, including cross-origin, delayed
-  // discovery, failed-init retry, and terminate-once scenarios.
-  // ================================================================
-  var scorm = (function(){
-    var MAX_SEARCH_DEPTH = 500;
-    var DISCOVERY_RETRY_MS = 300;
-    var DISCOVERY_MAX_ATTEMPTS = 20;
-
-    var state = {
-      api: null,
-      version: null,       // '1.2', '2004', or null if no LMS was found
-      initialized: false,
-      locked: false,
-      terminated: false,
-      discoveryAttempts: 0
-    };
-
-    function climbForProperty(startWin, propName){
-      var depth = 0;
-      var current = startWin;
-      while(current && depth < MAX_SEARCH_DEPTH){
-        var value = null;
-        var nextWin = null;
-        try{
-          value = current[propName] || null;
-        } catch(e){
-          return null; // cross-origin: stop climbing this chain
-        }
-        if(value){ return value; }
-        try{
-          nextWin = (current.parent && current.parent !== current) ? current.parent : null;
-        } catch(e){
-          return null; // cross-origin parent reference: stop climbing this chain
-        }
-        if(!nextWin) break;
-        current = nextWin;
-        depth++;
-      }
-      return null;
-    }
-
-    function findOnOpener(propName){
-      try{
-        if(window.opener && window.opener[propName]){
-          return window.opener[propName];
-        }
-      } catch(e){ /* cross-origin opener: ignore */ }
-      return null;
-    }
-
-    function locateCandidate(){
-      var api2004 = climbForProperty(window, 'API_1484_11') || findOnOpener('API_1484_11');
-      if(api2004) return { api: api2004, version: '2004' };
-      var api12 = climbForProperty(window, 'API') || findOnOpener('API');
-      if(api12) return { api: api12, version: '1.2' };
-      return null;
-    }
-
-    function attemptInit(candidate){
-      var result;
-      try{
-        result = candidate.version === '2004' ? candidate.api.Initialize('') : candidate.api.LMSInitialize('');
-      } catch(e){ result = false; }
-      return (result === true || result === 'true');
-    }
-
-    // Attempts discovery immediately; retries on a short delay up to
-    // DISCOVERY_MAX_ATTEMPTS if no API is found yet, or if an API was
-    // found but Initialize failed. Once locked, this is a no-op.
-    function discoverAndInit(onSettled){
-      if(state.locked){ if(typeof onSettled === 'function') onSettled(state); return; }
-      var candidate = locateCandidate();
-      if(candidate && attemptInit(candidate)){
-        state.api = candidate.api;
-        state.version = candidate.version;
-        state.initialized = true;
-        state.locked = true;
-        if(typeof onSettled === 'function') onSettled(state);
-        return;
-      }
-      state.discoveryAttempts++;
-      if(state.discoveryAttempts < DISCOVERY_MAX_ATTEMPTS){
-        window.setTimeout(function(){ discoverAndInit(onSettled); }, DISCOVERY_RETRY_MS);
-      } else {
-        // No LMS API found (or Initialize never succeeded) after
-        // repeated attempts. The activity continues standalone.
-        if(typeof onSettled === 'function') onSettled(state);
-      }
-    }
-
-    function getValue(name){
-      if(!state.api || !state.initialized) return '';
-      try{
-        var v = state.version === '2004' ? state.api.GetValue(name) : state.api.LMSGetValue(name);
-        return (v === undefined || v === null) ? '' : v;
-      } catch(e){ return ''; }
-    }
-
-    function setValue(name, value){
-      if(!state.api || !state.initialized) return false;
-      try{
-        var result = state.version === '2004' ? state.api.SetValue(name, value) : state.api.LMSSetValue(name, value);
-        return (result === true || result === 'true');
-      } catch(e){ return false; }
-    }
-
-    function commit(){
-      if(!state.api || !state.initialized) return false;
-      try{
-        var result = state.version === '2004' ? state.api.Commit('') : state.api.LMSCommit('');
-        return (result === true || result === 'true');
-      } catch(e){ return false; }
-    }
-
-    function getLastError(){
-      if(!state.api) return '';
-      try{
-        return state.version === '2004' ? state.api.GetLastError() : state.api.LMSGetLastError();
-      } catch(e){ return ''; }
-    }
-
-    // Commits before terminating, as required. Guarded so it can
-    // never fire more than once, whether called from Done, Try
-    // Again, pagehide, or beforeunload.
-    function terminate(){
-      if(state.terminated) return true;
-      if(!state.initialized){ state.terminated = true; return true; }
-      commit();
-      var result;
-      try{
-        result = state.version === '2004' ? state.api.Terminate('') : state.api.LMSFinish('');
-      } catch(e){ result = false; }
-      state.terminated = (result === true || result === 'true');
-      return state.terminated;
-    }
-
-    function scoreFieldName(){ return state.version === '2004' ? 'cmi.score.raw' : 'cmi.core.score.raw'; }
-    function locationFieldName(){ return state.version === '2004' ? 'cmi.location' : 'cmi.core.lesson_location'; }
-    function exitFieldName(){ return state.version === '2004' ? 'cmi.exit' : 'cmi.core.exit'; }
-
-    // Marks the attempt completed/passed without downgrading an
-    // existing completed/passed status already recorded by the LMS.
-    function markCompleted(){
-      if(!state.initialized) return false;
-      var ok = true;
-      if(state.version === '2004'){
-        if(getValue('cmi.completion_status') !== 'completed'){
-          ok = setValue('cmi.completion_status', 'completed') && ok;
-        }
-        if(getValue('cmi.success_status') !== 'passed'){
-          ok = setValue('cmi.success_status', 'passed') && ok;
-        }
-      } else {
-        var current = getValue('cmi.core.lesson_status');
-        if(current !== 'passed' && current !== 'completed'){
-          ok = setValue('cmi.core.lesson_status', 'completed') && ok;
-        }
-      }
-      return ok;
-    }
-
-    function setScoreRaw(raw){
-      if(!state.initialized) return false;
-      return setValue(scoreFieldName(), String(raw));
-    }
-    function setSuspendData(json){ return setValue('cmi.suspend_data', json); }
-    function getSuspendData(){ return getValue('cmi.suspend_data'); }
-    function setLocation(v){ return setValue(locationFieldName(), v); }
-    function setExit(mode){ return setValue(exitFieldName(), mode); }
-
-    return {
-      state: state,
-      discoverAndInit: discoverAndInit,
-      getValue: getValue,
-      setValue: setValue,
-      commit: commit,
-      terminate: terminate,
-      getLastError: getLastError,
-      markCompleted: markCompleted,
-      setScoreRaw: setScoreRaw,
-      setSuspendData: setSuspendData,
-      getSuspendData: getSuspendData,
-      setLocation: setLocation,
-      setExit: setExit
-    };
-  })();
-
-  // ================================================================
-  // Persistence: compact, versioned JSON saved to cmi.suspend_data
-  // (or a uniquely named localStorage key when no LMS is present).
-  // Every restored value is independently validated; nothing is
-  // trusted at face value, and no combination of stored fields can
-  // unlock a screen the learner has not genuinely earned.
+  // Persistence: compact, versioned JSON saved to a uniquely named
+  // localStorage key, so a learner who reloads or reopens this page
+  // in the same browser resumes where they left off. Every restored
+  // value is independently validated; nothing is trusted at face
+  // value, and no combination of stored fields can unlock a screen
+  // the learner has not genuinely earned. This is entirely local to
+  // the browser and needs no external service to work.
   // Verified in isolation (see test_persistence.js) against corrupted,
   // forged, out-of-range and legitimate payloads.
   // ================================================================
@@ -921,63 +728,29 @@
     };
   }
 
-  var commitTimer = null;
-  function scheduleCommit(){
-    if(commitTimer){ window.clearTimeout(commitTimer); }
-    commitTimer = window.setTimeout(function(){
-      scorm.commit();
-      commitTimer = null;
-    }, 800);
-  }
-
-  // Saves after every meaningful change. `immediate` forces a
-  // synchronous commit (used on screen transitions and completion);
-  // otherwise the commit itself is debounced so rapid tile clicks
-  // don't hammer the LMS with network round-trips.
-  function persistState(immediate){
+  // Saves after every meaningful change and screen transition.
+  function persistState(){
     var snapshot;
     try{
       snapshot = JSON.stringify(buildSnapshot());
     } catch(e){
       return; // persistence must never break the lesson
     }
-    var savedToScorm = false;
-    if(scorm.state.initialized){
-      savedToScorm = scorm.setSuspendData(snapshot);
-    }
-    if(!savedToScorm){
-      try{
-        window.localStorage.setItem(LOCAL_STORAGE_KEY, snapshot);
-      } catch(e){ /* storage unavailable/full: lesson still works in-memory */ }
-    }
-    if(immediate){
-      scorm.commit();
-    } else {
-      scheduleCommit();
-    }
+    try{
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, snapshot);
+    } catch(e){ /* storage unavailable/full: lesson still works in-memory */ }
   }
 
   function clearPersistedState(){
-    if(scorm.state.initialized){
-      scorm.setSuspendData('');
-    }
     try{ window.localStorage.removeItem(LOCAL_STORAGE_KEY); } catch(e){ /* ignore */ }
   }
 
   function loadPersistedState(){
     var raw = null;
-    if(scorm.state.initialized){
-      var fromScorm = scorm.getSuspendData();
-      if(fromScorm){
-        try{ raw = JSON.parse(fromScorm); } catch(e){ raw = null; }
-      }
-    }
-    if(!raw){
-      try{
-        var fromLocal = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-        if(fromLocal) raw = JSON.parse(fromLocal);
-      } catch(e){ raw = null; }
-    }
+    try{
+      var fromLocal = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      if(fromLocal) raw = JSON.parse(fromLocal);
+    } catch(e){ raw = null; }
     return validateSnapshot(raw);
   }
 
@@ -1028,7 +801,7 @@
       heading.focus();
     }
     announce('Screen ' + n + ' of ' + TOTAL_SCREENS + '. ' + (heading ? heading.textContent : ''));
-    persistState(true);
+    persistState();
   }
 
   function shuffle(arr){
@@ -1084,7 +857,7 @@
         s2Order.push(i);
         if(s2Done){ s2SetDone(false); } // edited after passing: revoke
         s2Render();
-        persistState(false);
+        persistState();
       });
       s2Bank.appendChild(b);
     });
@@ -1098,7 +871,7 @@
         s2Order.splice(pos, 1);
         if(s2Done){ s2SetDone(false); } // edited after passing: revoke
         s2Render();
-        persistState(false);
+        persistState();
       });
       s2Answer.appendChild(b);
     });
@@ -1111,7 +884,7 @@
     s2Feedback.className = 'feedback';
     s2SetDone(false);
     s2Render();
-    persistState(false);
+    persistState();
   });
 
   document.getElementById('tileCheck').addEventListener('click', function(){
@@ -1121,7 +894,7 @@
     s2Feedback.className = ok ? 'feedback ok' : 'feedback retry';
     markSymbol(s2Feedback, ok);
     s2SetDone(ok);
-    persistState(false);
+    persistState();
   });
   s2Next.addEventListener('click', function(){ goToScreen(3); });
 
@@ -1197,7 +970,7 @@
         window.setTimeout(function(){ btn.classList.remove('wrong-flash'); }, 900);
       }
       checkS3Done();
-      persistState(false);
+      persistState();
     }
     optAvailable.addEventListener('click', function(){ handleChoice('available', optAvailable, optBusy); });
     optBusy.addEventListener('click', function(){ handleChoice('busy', optBusy, optAvailable); });
@@ -1252,7 +1025,7 @@
         s4Order.push(i);
         if(s4Done){ s4SetDone(false); }
         s4Render();
-        persistState(false);
+        persistState();
       });
       s4Bank.appendChild(b);
     });
@@ -1266,7 +1039,7 @@
         s4Order.splice(pos, 1);
         if(s4Done){ s4SetDone(false); }
         s4Render();
-        persistState(false);
+        persistState();
       });
       s4Answer.appendChild(b);
     });
@@ -1279,7 +1052,7 @@
     s4Feedback.className = 'feedback';
     s4SetDone(false);
     s4Render();
-    persistState(false);
+    persistState();
   });
 
   document.getElementById('phraseCheck').addEventListener('click', function(){
@@ -1289,7 +1062,7 @@
     s4Feedback.className = ok ? 'feedback ok' : 'feedback retry';
     markSymbol(s4Feedback, ok);
     s4SetDone(ok);
-    persistState(false);
+    persistState();
   });
   s4Next.addEventListener('click', function(){ goToScreen(5); });
 
@@ -1343,7 +1116,7 @@
       doneMsg.textContent = 'You completed the arrangement.';
       markSymbol(doneMsg, true);
       choicesEl.appendChild(doneMsg);
-      persistState(false);
+      persistState();
       return;
     }
     var turn = s5Turns[s5Turn];
@@ -1372,7 +1145,7 @@
           b.classList.add('correct-flash');
           s5AppendLine(turn);
           s5Turn++;
-          persistState(false);
+          persistState();
           window.setTimeout(s5RenderTurn, 350);
         } else {
           b.setAttribute('aria-pressed', 'true');
@@ -1432,7 +1205,7 @@
       s6Day = d;
       s6DayChosen = true;
       s6UpdatePreview();
-      persistState(false);
+      persistState();
     });
     dayChipsEl.appendChild(b);
   });
@@ -1452,7 +1225,7 @@
       s6Time = t;
       s6TimeChosen = true;
       s6UpdatePreview();
-      persistState(false);
+      persistState();
     });
     timeChipsEl.appendChild(b);
   });
@@ -1511,7 +1284,7 @@
         window.setTimeout(function(){ b.classList.remove('wrong-flash'); }, 900);
       }
       checkS7Done();
-      persistState(false);
+      persistState();
     });
     s7AButtons.push(b);
     optionsAEl.appendChild(b);
@@ -1544,7 +1317,7 @@
         window.setTimeout(function(){ b.classList.remove('wrong-flash'); }, 900);
       }
       checkS7Done();
-      persistState(false);
+      persistState();
     });
     s7BButtons.push(b);
     optionsBEl.appendChild(b);
@@ -1565,61 +1338,25 @@
   var doneBtn = document.getElementById('btn-done');
   var completionNote = document.getElementById('completionNote');
   var tryAgainBtn = document.getElementById('btn-try-again');
-  var doneInProgress = false;
 
   function allScreensGenuinelyComplete(){
     return s2Done && s3Done && s4Done && (s5Turn >= s5Turns.length) && s6DayChosen && s6TimeChosen && aFixed && bFixed;
   }
 
   function fireCompletion(){
-    if(doneFired || doneInProgress) return;
+    if(doneFired) return;
     if(!allScreensGenuinelyComplete()){
       // Defensive: Done is only reachable via screen 7's Carry on,
-      // which already requires this, but never claim success if it
+      // which already requires this, but never mark complete if it
       // somehow is not the case.
-      completionNote.textContent = 'Please finish every activity before marking this complete.';
       return;
     }
-    doneInProgress = true;
+    doneFired = true;
+    persistState();
+    doneBtn.textContent = 'Done \u2713';
     doneBtn.disabled = true;
-    completionNote.textContent = 'Saving your progress\u2026';
-
-    var scormAvailable = scorm.state.initialized;
-    var allOk = true;
-
-    persistState(false);
-
-    if(scormAvailable){
-      allOk = scorm.setScoreRaw(100) && allOk;
-      allOk = scorm.markCompleted() && allOk;
-      var committed = scorm.commit();
-      allOk = committed && allOk;
-    }
-
-    doneInProgress = false;
-
-    if(scormAvailable && allOk){
-      doneFired = true;
-      persistState(true);
-      doneBtn.textContent = 'Done \u2713';
-      doneBtn.disabled = true;
-      completionNote.textContent = 'Your progress has been saved and marked complete in your course.';
-      announce('Activity completed and saved.');
-    } else if(scormAvailable && !allOk){
-      // A real SCORM API is present but a write/commit failed:
-      // never claim success.
-      doneBtn.disabled = false;
-      completionNote.textContent = 'Your course did not confirm that this was saved. Please try Done again.';
-      announce('Saving to your course failed. You can try again.');
-    } else {
-      // No SCORM API at all: honest local-only completion.
-      doneFired = true;
-      persistState(true);
-      doneBtn.textContent = 'Done \u2713';
-      doneBtn.disabled = true;
-      completionNote.textContent = 'Activity completed locally. Moodle completion could not be confirmed.';
-      announce('Activity completed locally.');
-    }
+    completionNote.textContent = 'Well done! You have completed this activity.';
+    announce('Activity completed.');
   }
   doneBtn.addEventListener('click', fireCompletion);
 
@@ -1691,24 +1428,6 @@
 
     resetActivityState();
     clearPersistedState();
-
-    if(scorm.state.initialized){
-      // Reset score/status only where the LMS permits rewriting them;
-      // some LMS deployments lock a completed attempt, which is fine
-      // and expected \u2014 we simply report it rather than pretending.
-      var scoreOk = scorm.setScoreRaw(0);
-      var statusOk;
-      if(scorm.state.version === '2004'){
-        statusOk = scorm.setValue('cmi.completion_status', 'incomplete') && scorm.setValue('cmi.success_status', 'unknown');
-      } else {
-        statusOk = scorm.setValue('cmi.core.lesson_status', 'incomplete');
-      }
-      scorm.commit();
-      if(!scoreOk || !statusOk){
-        announce('Your course may require a new attempt to fully reset your score and status.');
-      }
-    }
-
     goToScreen(1);
   });
 
@@ -1818,30 +1537,10 @@
     }
   }
 
-  // ---------- Safe unload handling ----------
-  function handleUnload(){
-    try{
-      if(scorm.state.initialized && !scorm.state.terminated){
-        scorm.setExit(doneFired ? 'normal' : 'suspend');
-        scorm.terminate();
-      }
-    } catch(e){ /* never let unload handling throw */ }
-  }
-  window.addEventListener('pagehide', handleUnload);
-  window.addEventListener('beforeunload', handleUnload);
-
   // ---------- Boot sequence ----------
-  // Restore progress immediately from whatever is synchronously
-  // available. In a real LMS, discoverAndInit's first attempt
-  // resolves synchronously (the API object is already present in the
-  // parent frame), so scorm.state.initialized is already true by the
-  // time loadPersistedState() runs and suspend_data is used. If no
-  // API is found immediately, we do NOT block the learner's restore
-  // on the full bounded retry cycle (which can take several seconds)
-  // -- we restore from localStorage right away instead, while SCORM
-  // discovery keeps retrying quietly in the background so score and
-  // completion can still be written later if an LMS API appears.
-  scorm.discoverAndInit();
+  // Restore any progress saved earlier in this browser, then show
+  // the lesson. This is entirely local (localStorage) and needs no
+  // any Moodle connection, external API, or parent window to work.
   applyRestoredState(loadPersistedState());
 
   // Export pure logic for automated testing only; harmless in the
