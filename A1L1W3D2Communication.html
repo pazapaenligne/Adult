@@ -269,17 +269,6 @@
     display:block;
   }
   .plan-item .plan-a{font-weight:700;}
-  .mode-toggle{
-    display:flex;
-    gap:.75rem;
-    margin-bottom:1.25rem;
-  }
-  .mode-toggle button{flex:1;}
-  .mode-toggle button[aria-pressed="true"]{
-    background:var(--pazapa-blue);
-    color:var(--white);
-    border-color:var(--pazapa-blue);
-  }
   textarea{
     width:100%;
     min-height:120px;
@@ -292,35 +281,6 @@
   }
   textarea:focus{border-color:var(--pazapa-blue);}
   label{font-weight:700;display:block;margin-bottom:.4rem;}
-  .record-panel{
-    border:2px dashed var(--pazapa-grey-light);
-    border-radius:var(--radius);
-    padding:1.25rem;
-    text-align:center;
-  }
-  .record-btn{
-    background:var(--pazapa-red);
-    color:var(--white);
-    border-radius:999px;
-    width:72px;
-    height:72px;
-    min-width:72px;
-    min-height:72px;
-    border:none;
-    cursor:pointer;
-    font-size:1.6rem;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    margin-bottom:.75rem;
-    touch-action:manipulation;
-  }
-  .record-btn:disabled{
-    opacity:.55;
-    cursor:not-allowed;
-  }
-  .record-status{font-size:.95rem;margin-bottom:.5rem;min-height:1.3em;}
-  .record-timer{font-variant-numeric:tabular-nums;font-weight:700;}
   .checklist{
     display:grid;
     gap:.75rem;
@@ -510,28 +470,10 @@
         <p>Hello. Today's subject is science. Samir has homework. He needs his notebook, pencil and worksheet.</p>
       </div>
 
-      <div class="mode-toggle" role="group" aria-label="Choose Write or Record">
-        <button type="button" class="btn btn-secondary" id="mode-write-btn" aria-pressed="false">Write</button>
-        <button type="button" class="btn btn-secondary" id="mode-record-btn" aria-pressed="false">Record</button>
-      </div>
-
-      <div id="write-panel" hidden>
+      <div id="write-panel">
         <label for="message-text">Send a short message to another caregiver.</label>
         <textarea id="message-text" placeholder="Hello. Today's subject is..."></textarea>
         <p class="field-hint" id="write-notes-hint"></p>
-      </div>
-
-      <div id="record-panel" hidden>
-        <div class="record-panel">
-          <p class="lead" style="margin-bottom:1rem;">Record a 20–40 second voice note.</p>
-          <button type="button" class="record-btn" id="record-toggle-btn" aria-pressed="false" aria-label="Start recording">●</button>
-          <p class="record-status" id="record-status" aria-live="polite">Not recording yet.</p>
-          <div id="record-playback" hidden>
-            <audio id="record-audio" controls aria-label="Play back your recording" style="width:100%;max-width:320px;"></audio>
-            <p><button type="button" class="btn btn-secondary" id="record-again-btn">Record again</button></p>
-          </div>
-        </div>
-        <p class="field-hint">Recordings stay on this device. They are not uploaded to Moodle.</p>
       </div>
 
       <p id="s3-validation-error" class="field-hint" role="alert" aria-live="assertive"></p>
@@ -577,7 +519,6 @@
       <p class="lead">Save your message to finish the Communication Mission.</p>
 
       <div class="status-line" id="storage-status"></div>
-      <div class="status-line info" id="recording-note" hidden>Your recording stays on this device. It is not uploaded.</div>
       <p id="submit-error" class="field-hint" role="alert" aria-live="assertive"></p>
 
       <div class="btn-row">
@@ -648,7 +589,7 @@
     "Please bring your worksheet."
   ];
 
-  var STATE_SCHEMA_VERSION = 2;
+  var STATE_SCHEMA_VERSION = 3; /* bumped: recording support removed, write-only */
   var LOCAL_KEY = "pazapa_a1_w3l2_step6_communication";
   var SUSPEND_DATA_BYTE_LIMIT_12 = 4096;
 
@@ -853,10 +794,7 @@
   var state = {
     profileId: null,
     selectedPhrases: [],
-    mode: null,
     messageText: "",
-    hasRecording: false,
-    recordingSeconds: 0,
     selfChecks: { subject:false, homework:false, supplies:false },
     completed: false
   };
@@ -875,13 +813,9 @@
       v: STATE_SCHEMA_VERSION,
       profileId: state.profileId,
       selectedPhrases: state.selectedPhrases,
-      mode: state.mode,
       messageText: state.messageText,
       selfChecks: state.selfChecks,
       completed: state.completed
-      /* hasRecording / recordingSeconds are deliberately NOT persisted:
-         the audio Blob only exists in this browser session's memory and
-         cannot survive a reload, so claiming it was saved would be false. */
     };
   }
 
@@ -898,8 +832,6 @@
       trimmed.messageText = text;
     }
     if (utf8ByteLength(JSON.stringify(trimmed)) > SUSPEND_DATA_BYTE_LIMIT_12) {
-      /* still too big (shouldn't happen with our small fixed fields) --
-         drop optional fields defensively rather than write invalid/oversized data */
       trimmed.selectedPhrases = [];
       trimmed.messageText = "";
     }
@@ -915,7 +847,6 @@
       var setOk = SCORM.apiSetValue("cmi.suspend_data", json);
       var commitOk = setOk && SCORM.apiCommit();
       if (setOk && commitOk) return { success:true, viaLocal:false };
-      /* SCORM write failed this time -- fall through to local save so work is never lost */
       saveLocal(payload);
       return { success:false, viaLocal:true };
     }
@@ -929,7 +860,6 @@
     var out = {
       profileId: null,
       selectedPhrases: [],
-      mode: null,
       messageText: "",
       selfChecks: { subject:false, homework:false, supplies:false },
       completed: false
@@ -943,9 +873,6 @@
       out.selectedPhrases = raw.selectedPhrases.filter(function(p){
         return typeof p === "string" && VALID_PHRASES.indexOf(p) > -1;
       });
-    }
-    if (raw.mode === "write" || raw.mode === "record") {
-      out.mode = raw.mode;
     }
     if (typeof raw.messageText === "string") {
       out.messageText = raw.messageText.slice(0, 4000);
@@ -965,9 +892,6 @@
      Incomplete / completion status writers
   ========================================================= */
 
-  /* Called on genuine learner interactions. Never writes "incomplete"
-     over an already-completed/passed LMS status, and only sets its
-     own success flag once Moodle actually confirms the write. */
   function sendIncompleteIfNeeded(){
     if (!scormReady || !SCORM.isAvailable()) return false;
     if (lmsCompletionConfirmed || state.completed) return true; /* never downgrade */
@@ -978,11 +902,10 @@
       incompleteSent = true;
       return true;
     }
-    return false; /* caller may simply try again on the next interaction */
+    return false;
   }
 
-  /* The real completion sequence, run from the Screen 5 Submit button.
-     Returns {success:boolean, reason:string, viaLocal:boolean}. */
+  /* The real completion sequence, run from the Screen 5 Submit button. */
   function completeActivity(){
     if (completionInProgress) return { success:false, reason:"in-progress" };
     if (!validateScreen3(true)) {
@@ -996,16 +919,12 @@
       saveProgress();
 
       if (!scormReady) {
-        /* No LMS connected at all: allow the learner to finish locally,
-           but never claim Moodle confirmed it. */
         state.completed = true;
         saveLocal(buildPersistPayload());
         return { success:true, reason:"local-only", viaLocal:true };
       }
 
       if (lmsCompletionConfirmed) {
-        /* Already completed earlier in this same connection -- re-writing
-           is a safe no-op, never a downgrade. */
         state.completed = true;
         completionSent = true;
         return { success:true, reason:"already-completed", viaLocal:false };
@@ -1017,7 +936,6 @@
         return { success:false, reason:"scorm-write-failed" };
       }
 
-      /* Read back where supported, to confirm. */
       var readBack = SCORM.readExistingCompletion();
       if (!readBack.completed) {
         return { success:false, reason:"scorm-readback-failed" };
@@ -1037,7 +955,6 @@
     if (exitHandled) return;
     exitHandled = true;
     try { saveProgress(); } catch(e){}
-    try { stopAllRecordingResources(); } catch(e){}
     try { SCORM.apiTerminate(); } catch(e){}
   }
 
@@ -1172,58 +1089,22 @@
   }
 
   /* =========================================================
-     Screen 3: create response (write / record) + validation
+     Screen 3: create response (write only)
   ========================================================= */
-  var modeWriteBtn = document.getElementById("mode-write-btn");
-  var modeRecordBtn = document.getElementById("mode-record-btn");
-  var writePanel = document.getElementById("write-panel");
-  var recordPanel = document.getElementById("record-panel");
   var messageText = document.getElementById("message-text");
   var s3Next = document.getElementById("s3-next");
   var s3ValidationError = document.getElementById("s3-validation-error");
 
-  /* Single source of truth for whether Screen 3's response is valid.
-     Called on every relevant change, before Screen 4, and before submit. */
+  /* Single source of truth for whether Screen 3's response is valid. */
   function validateScreen3(silent){
-    var valid = false;
-    var reason = "";
-    if (state.mode === "write") {
-      valid = messageText.value.trim().length > 0;
-      if (!valid) reason = "Please write a message before continuing.";
-    } else if (state.mode === "record") {
-      valid = state.hasRecording === true;
-      if (!valid) reason = "Please record a voice note, or switch to Write.";
-    } else {
-      valid = false;
-      reason = "Choose Write or Record to continue.";
-    }
+    var valid = messageText.value.trim().length > 0;
+    var reason = valid ? "" : "Please write a message before continuing.";
     s3Next.disabled = !valid;
     if (s3ValidationError) {
-      s3ValidationError.textContent = (silent ? "" : (valid ? "" : reason));
+      s3ValidationError.textContent = (silent ? "" : reason);
     }
     return valid;
   }
-
-  function setMode(mode){
-    if (state.mode === "record" && mode !== "record") {
-      /* Leaving Record mode must not leave the microphone running unattended. */
-      if (recordState === "recording") {
-        stopRecording();
-      } else if (recordState === "requesting") {
-        recordAbandoned = true;
-      }
-    }
-    state.mode = mode;
-    modeWriteBtn.setAttribute("aria-pressed", mode === "write" ? "true" : "false");
-    modeRecordBtn.setAttribute("aria-pressed", mode === "record" ? "true" : "false");
-    writePanel.hidden = (mode !== "write");
-    recordPanel.hidden = (mode !== "record");
-    validateScreen3(true);
-    saveProgress();
-  }
-
-  modeWriteBtn.addEventListener("click", function(){ sendIncompleteIfNeeded(); setMode("write"); });
-  modeRecordBtn.addEventListener("click", function(){ sendIncompleteIfNeeded(); setMode("record"); });
 
   messageText.addEventListener("input", function(){
     state.messageText = messageText.value;
@@ -1239,232 +1120,6 @@
   });
 
   /* =========================================================
-     Recording (MediaRecorder)
-  ========================================================= */
-  var recordToggleBtn = document.getElementById("record-toggle-btn");
-  var recordStatus = document.getElementById("record-status");
-  var recordPlayback = document.getElementById("record-playback");
-  var recordAudio = document.getElementById("record-audio");
-  var recordAgainBtn = document.getElementById("record-again-btn");
-
-  var mediaRecorder = null;
-  var mediaStream = null;
-  var recordedChunks = [];
-  var recordTimerInterval = null;
-  var recordSecondsElapsed = 0;
-  var recordState = "idle"; /* idle | requesting | recording | recorded | denied | no-device | device-busy | insecure | unsupported | error */
-  var recordAbandoned = false;
-  var recordMimeType = "";
-
-  function supportsRecording(){
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
-  }
-
-  function pickMimeType(){
-    var candidates = ["audio/webm", "audio/webm;codecs=opus", "audio/mp4", "audio/ogg", "audio/ogg;codecs=opus"];
-    if (window.MediaRecorder && typeof MediaRecorder.isTypeSupported === "function") {
-      for (var i = 0; i < candidates.length; i++) {
-        try { if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i]; }
-        catch(e){}
-      }
-    }
-    return ""; /* let the browser pick its own default (e.g. Safari) */
-  }
-
-  function setRecordStatus(text){
-    recordStatus.textContent = text;
-  }
-
-  function startTimer(){
-    recordSecondsElapsed = 0;
-    recordTimerInterval = window.setInterval(function(){
-      recordSecondsElapsed += 1;
-      var m = Math.floor(recordSecondsElapsed / 60);
-      var s = recordSecondsElapsed % 60;
-      setRecordStatus("Recording… " + m + ":" + (s < 10 ? "0" : "") + s);
-    }, 1000);
-  }
-
-  function stopTimer(){
-    if (recordTimerInterval) { window.clearInterval(recordTimerInterval); recordTimerInterval = null; }
-  }
-
-  function revokeRecordingUrl(){
-    if (recordAudio.src && recordAudio.src.indexOf("blob:") === 0) {
-      try { URL.revokeObjectURL(recordAudio.src); } catch(e){}
-    }
-    recordAudio.removeAttribute("src");
-  }
-
-  /* Stops any active mic track / timer and revokes any blob URL.
-     Used on mode change abandonment, reset, and page exit. */
-  function stopAllRecordingResources(){
-    stopTimer();
-    if (mediaRecorder) {
-      try { if (mediaRecorder.state !== "inactive") mediaRecorder.stop(); } catch(e){}
-    }
-    if (mediaStream) {
-      try { mediaStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}
-      mediaStream = null;
-    }
-  }
-
-  function classifyRecordingError(err){
-    var name = err && err.name ? err.name : "";
-    if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
-      return { state:"denied", message:"Microphone access was not given. You can try again or use Write instead." };
-    }
-    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-      return { state:"no-device", message:"No microphone was found on this device. Please use Write instead." };
-    }
-    if (name === "NotReadableError" || name === "TrackStartError") {
-      return { state:"device-busy", message:"The microphone is being used by another app. Please close it and try again, or use Write instead." };
-    }
-    return { state:"error", message:"Recording failed. Please try again or use Write instead." };
-  }
-
-  function beginRecording(){
-    if (recordState === "requesting" || recordState === "recording") {
-      /* Ignore repeat taps while a request is already in flight or recording is under way. */
-      return;
-    }
-    if (window.isSecureContext === false) {
-      recordState = "insecure";
-      setRecordStatus("Recording needs a secure (https) connection. Please use Write instead.");
-      recordToggleBtn.disabled = true;
-      return;
-    }
-    if (!supportsRecording()) {
-      recordState = "unsupported";
-      setRecordStatus("Recording is not supported in this browser. Please use Write instead.");
-      recordToggleBtn.disabled = true;
-      return;
-    }
-    recordAbandoned = false;
-    recordState = "requesting";
-    setRecordStatus("Requesting microphone permission…");
-    navigator.mediaDevices.getUserMedia({ audio:true }).then(function(stream){
-      if (recordAbandoned) {
-        recordAbandoned = false;
-        recordState = "idle";
-        stream.getTracks().forEach(function(t){ t.stop(); });
-        setRecordStatus("Not recording yet.");
-        return;
-      }
-      mediaStream = stream;
-      recordedChunks = [];
-      recordMimeType = pickMimeType();
-      try {
-        mediaRecorder = recordMimeType ? new MediaRecorder(stream, { mimeType: recordMimeType }) : new MediaRecorder(stream);
-      } catch(e){
-        recordState = "error";
-        setRecordStatus("Recording failed. Please try again or use Write instead.");
-        stream.getTracks().forEach(function(t){ t.stop(); });
-        mediaStream = null;
-        return;
-      }
-      mediaRecorder.addEventListener("dataavailable", function(e){
-        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
-      });
-      mediaRecorder.addEventListener("error", function(){
-        stopTimer();
-        recordState = "error";
-        setRecordStatus("Recording failed. Please try again or use Write instead.");
-        if (mediaStream) { mediaStream.getTracks().forEach(function(t){ t.stop(); }); mediaStream = null; }
-        validateScreen3(true);
-      });
-      mediaRecorder.addEventListener("stop", function(){
-        stopTimer();
-        var totalBytes = recordedChunks.reduce(function(sum, c){ return sum + (c.size || 0); }, 0);
-        if (totalBytes === 0) {
-          recordState = "error";
-          setRecordStatus("No audio was captured. Please try recording again.");
-          state.hasRecording = false;
-          validateScreen3(true);
-        } else {
-          try {
-            revokeRecordingUrl();
-            var actualType = (mediaRecorder && mediaRecorder.mimeType) ? mediaRecorder.mimeType : (recordMimeType || "audio/webm");
-            var blob = new Blob(recordedChunks, { type: actualType });
-            var url = URL.createObjectURL(blob);
-            recordAudio.src = url;
-            recordPlayback.hidden = false;
-            state.hasRecording = true;
-            state.recordingSeconds = recordSecondsElapsed;
-            recordState = "recorded";
-            setRecordStatus("Recording saved (" + recordSecondsElapsed + " seconds).");
-          } catch(e){
-            recordState = "error";
-            setRecordStatus("Recording failed. Please try again or use Write instead.");
-            state.hasRecording = false;
-          }
-        }
-        recordToggleBtn.setAttribute("aria-pressed", "false");
-        recordToggleBtn.setAttribute("aria-label", "Start recording");
-        recordToggleBtn.textContent = "●";
-        sendIncompleteIfNeeded();
-        validateScreen3(true);
-        saveProgress();
-        if (mediaStream) {
-          mediaStream.getTracks().forEach(function(t){ t.stop(); });
-          mediaStream = null;
-        }
-      });
-      try {
-        mediaRecorder.start();
-      } catch(e){
-        recordState = "error";
-        setRecordStatus("Recording failed. Please try again or use Write instead.");
-        stream.getTracks().forEach(function(t){ t.stop(); });
-        mediaStream = null;
-        return;
-      }
-      recordState = "recording";
-      recordToggleBtn.setAttribute("aria-pressed", "true");
-      recordToggleBtn.setAttribute("aria-label", "Stop recording");
-      recordToggleBtn.textContent = "■";
-      recordPlayback.hidden = true;
-      startTimer();
-      setRecordStatus("Recording… 0:00");
-    }).catch(function(err){
-      var classified = classifyRecordingError(err);
-      recordState = classified.state;
-      setRecordStatus(classified.message);
-      validateScreen3(true);
-    });
-  }
-
-  function stopRecording(){
-    if (mediaRecorder && recordState === "recording") {
-      try { mediaRecorder.stop(); } catch(e){
-        recordState = "error";
-        setRecordStatus("Recording failed. Please try again or use Write instead.");
-        stopAllRecordingResources();
-        validateScreen3(true);
-      }
-    }
-  }
-
-  recordToggleBtn.addEventListener("click", function(){
-    sendIncompleteIfNeeded();
-    if (recordState === "recording") {
-      stopRecording();
-    } else {
-      beginRecording();
-    }
-  });
-
-  recordAgainBtn.addEventListener("click", function(){
-    state.hasRecording = false;
-    recordState = "idle";
-    revokeRecordingUrl();
-    recordPlayback.hidden = true;
-    setRecordStatus("Not recording yet.");
-    validateScreen3(true);
-    saveProgress();
-  });
-
-  /* =========================================================
      Screen 4: review
   ========================================================= */
   function buildReviewScreen(){
@@ -1472,13 +1127,7 @@
     content.innerHTML = "";
     var quote = document.createElement("div");
     quote.className = "review-quote";
-    if (state.mode === "write") {
-      quote.textContent = state.messageText;
-    } else if (state.mode === "record" && state.hasRecording) {
-      quote.textContent = "Voice note recorded (" + state.recordingSeconds + " seconds).";
-    } else {
-      quote.textContent = "";
-    }
+    quote.textContent = state.messageText;
     content.appendChild(quote);
 
     document.getElementById("check-subject").checked = state.selfChecks.subject;
@@ -1507,16 +1156,14 @@
 
   function buildSubmitScreen(){
     var statusLine = document.getElementById("storage-status");
-    var recordingNote = document.getElementById("recording-note");
     submitError.textContent = "";
     if (scormReady && SCORM.isAvailable()) {
       statusLine.className = "status-line ok";
       statusLine.textContent = "Connected to Moodle. Submitting will save your completion there.";
     } else {
-      statusLine.className = "status-line info";
-      statusLine.textContent = "Moodle is not connected right now. Your message will be saved on this device, and Moodle completion will not be confirmed until it reconnects.";
+      statusLine.className = "";
+      statusLine.textContent = "";
     }
-    recordingNote.hidden = !(state.mode === "record" && state.hasRecording);
     s5Submit.disabled = false;
     s5Submit.removeAttribute("aria-busy");
     s5Submit.textContent = "Submit";
@@ -1524,7 +1171,6 @@
 
   s5Submit.addEventListener("click", function(){
     if (!validateScreen3(true)) {
-      /* Response became invalid since Screen 3 (e.g. draft cleared) -- send them back. */
       submitError.textContent = "Your response is no longer valid. Please go back and check it.";
       return;
     }
@@ -1565,8 +1211,6 @@
   });
 
   document.getElementById("s6-done").addEventListener("click", function(){
-    /* Done finishes/closes the activity. Completion was already awarded
-       on Submit -- this never re-triggers or downgrades it. */
     saveProgress();
     document.getElementById("s6-done-confirm").hidden = false;
     document.getElementById("s6-done").disabled = true;
@@ -1576,14 +1220,9 @@
   function resetActivity(){
     /* Try again resets the response fields for a new attempt. It must
        never downgrade an already-earned Moodle completion. */
-    stopAllRecordingResources();
-
     state.profileId = null;
     state.selectedPhrases = [];
-    state.mode = null;
     state.messageText = "";
-    state.hasRecording = false;
-    state.recordingSeconds = 0;
     state.selfChecks = { subject:false, homework:false, supplies:false };
     /* state.completed / lmsCompletionConfirmed / completionSent are left untouched on purpose. */
 
@@ -1592,15 +1231,7 @@
 
     phraseChips.forEach(function(chip){ chip.setAttribute("aria-pressed", "false"); });
 
-    modeWriteBtn.setAttribute("aria-pressed", "false");
-    modeRecordBtn.setAttribute("aria-pressed", "false");
-    writePanel.hidden = true;
-    recordPanel.hidden = true;
     messageText.value = "";
-    recordState = "idle";
-    revokeRecordingUrl();
-    recordPlayback.hidden = true;
-    setRecordStatus("Not recording yet.");
     if (s3ValidationError) s3ValidationError.textContent = "";
     validateScreen3(true);
 
@@ -1619,7 +1250,7 @@
   /* =========================================================
      Restore saved state
   ========================================================= */
-  function applyRestoredState(rawSaved, fromScorm){
+  function applyRestoredState(rawSaved){
     var saved = sanitiseRestoredPayload(rawSaved);
 
     if (saved.profileId) {
@@ -1630,27 +1261,10 @@
       s1Next.disabled = false;
     }
     state.selectedPhrases = saved.selectedPhrases;
-    if (saved.mode) {
-      state.mode = saved.mode;
-    }
     state.messageText = saved.messageText;
     messageText.value = saved.messageText;
     state.selfChecks = saved.selfChecks;
 
-    /* The recorded audio Blob cannot survive a reload -- never restore
-       hasRecording as true. If the learner had chosen Record mode,
-       let them know it must be made again. */
-    state.hasRecording = false;
-    if (state.mode === "record") {
-      setRecordStatus("Your previous recording could not be restored. Please record again, or switch to Write.");
-    }
-
-    if (state.mode) {
-      modeWriteBtn.setAttribute("aria-pressed", state.mode === "write" ? "true" : "false");
-      modeRecordBtn.setAttribute("aria-pressed", state.mode === "record" ? "true" : "false");
-      writePanel.hidden = (state.mode !== "write");
-      recordPanel.hidden = (state.mode !== "record");
-    }
     validateScreen3(true);
   }
 
@@ -1674,7 +1288,6 @@
   function init(){
     scormReady = SCORM.initializeSCORM();
 
-    var restoredFromScorm = false;
     var raw = null;
 
     if (scormReady) {
@@ -1686,12 +1299,10 @@
       }
       var suspend = SCORM.apiGetValue("cmi.suspend_data");
       if (suspend) {
-        try { raw = JSON.parse(suspend); restoredFromScorm = true; }
+        try { raw = JSON.parse(suspend); }
         catch(e){ raw = null; } /* corrupt suspend_data must never crash init */
       }
       if (!raw) {
-        /* Fall back to local data if suspend_data is empty/corrupt, but
-           completion status itself already came from Moodle above. */
         raw = loadLocal();
       }
     } else {
@@ -1699,7 +1310,7 @@
       SCORM.scheduleSCORMRedetection(afterReconnect);
     }
 
-    applyRestoredState(raw, restoredFromScorm);
+    applyRestoredState(raw);
     showScreen(1);
   }
 
@@ -1723,6 +1334,7 @@
 
 })();
 </script>
+
 
 </body>
 </html>
