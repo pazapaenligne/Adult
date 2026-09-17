@@ -119,6 +119,40 @@
   saved/not-saved outcome and call sequence. completionSent still
   guarantees Done fires only once; recording playback status (Playing /
   finished / failed) reverified unchanged.
+
+  RECORDING REBUILD (this revision) — Screen 12's record / hear-it-back
+  flow rebuilt on the required architecture, everything else on the
+  screen left untouched:
+    - MediaRecorder now picks a MIME type via isTypeSupported(), tried in
+      order audio/webm;codecs=opus, audio/webm, audio/mp4, then the
+      browser default if none are supported.
+    - Each completed recording is stored as a Blob and played back from
+      URL.createObjectURL(blob) instead of a FileReader data: URL. The
+      shared playAudio() engine now accepts blob: sources as well as the
+      embedded data:audio/ sources, so one-sound-at-a-time and
+      stop-on-navigate still cover the learner's own recording.
+    - Play my recording stays disabled until a completed recording has a
+      non-empty Blob; an empty recording ("No sound was recorded.")
+      re-enables Record instead of enabling Play.
+    - Pressing Record again stops any current playback (model or the
+      learner's own) and revokes the previous object URL before the new
+      recording starts, so a valid recording is never discarded before
+      the learner has heard it and object URLs do not leak.
+    - Permission denial and an unsupported/unavailable microphone are now
+      distinguished: a denied getUserMedia() request shows "Microphone
+      permission was denied..." and leaves the recording panel in place
+      so the learner can retry, while every other failure (no device,
+      device unreadable, construction/start throwing) shows the existing
+      out-loud practice fallback. Denial alone never triggers the
+      fallback.
+    - Every microphone track is stopped on recorder stop, on any error,
+      on a lost/ended device track, and on leaving Screen 12; a
+      permission-pending flag plus the existing per-attempt token stop
+      overlapping Record clicks and stale permission grants from
+      starting a hidden recording or mixing audio chunks.
+    - The recording is never written to Moodle, SCORM, a server,
+      localStorage or sessionStorage — it lives only in the page's memory
+      for the current session, exactly as before.
 -->
 <style>
   /* ------------------------------------------------------------------
@@ -987,7 +1021,6 @@
   <div class="navbar-inner">
     <button type="button" class="btn btn-ghost" id="backBtn" disabled>← Back</button>
     <button type="button" class="btn btn-next" id="nextBtn">Next →</button>
-    <button type="button" class="btn btn-ghost" id="tryAgainBtn" hidden>↻ Try again</button>
     <button type="button" class="btn btn-done" id="doneBtn" hidden disabled>Done</button>
   </div>
 </nav>
@@ -1125,7 +1158,6 @@
   var backBtn   = document.getElementById("backBtn");
   var nextBtn   = document.getElementById("nextBtn");
   var doneBtn   = document.getElementById("doneBtn");
-  var tryAgainBtn = document.getElementById("tryAgainBtn");
   var counter   = document.getElementById("counter");
   var fill      = document.getElementById("progressFill");
   var reduce    = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1147,7 +1179,6 @@
     nextBtn.hidden = last;
     doneBtn.hidden = !last;
     doneBtn.disabled = !last;
-    tryAgainBtn.hidden = !last;
 
     stopAudio();
 
@@ -1186,22 +1217,6 @@
     }
   });
 
-  /* ---------- Try again — reset and return to the start ---------- */
-  var readyDefaultText = "You are ready for Build Useful English.";
-  tryAgainBtn.addEventListener("click", function () {
-    stopAudio();
-    stopMicrophone(true);
-    completionSent = false;
-    doneBtn.disabled = true;
-    doneBtn.textContent = "Done";
-    var ready = document.querySelector("#s15 .ready");
-    if (ready) { ready.textContent = readyDefaultText; }
-    var selfCheckFeedback = document.getElementById("selfCheckFeedback");
-    if (selfCheckFeedback) { selfCheckFeedback.hidden = true; }
-    index = 0;
-    render(true);
-  });
-
   /* ---------- ONE AUDIO ENGINE — one sound at a time ---------- */
   var currentAudio = null;
   var currentHost = null;
@@ -1224,7 +1239,11 @@
   }
 
   function playAudio(src, host, playingText, endedText, errorText) {
-    if (typeof src !== "string" || src.indexOf("data:audio/") !== 0) {
+    /* Embedded model audio is a data: URL; the learner's own recording is
+       played back from a blob: object URL (see Screen 12 below). Both are
+       accepted here so a single shared engine keeps enforcing one-sound-
+       at-a-time and stop-on-navigate for every audio source in the page. */
+    if (typeof src !== "string" || !(src.indexOf("data:audio/") === 0 || src.indexOf("blob:") === 0)) {
       setStatus(host, errorText || "Audio is unavailable. You can continue with the written model.");
       return;
     }
@@ -1299,17 +1318,41 @@
   if (canRecord) { recPanel.hidden = false; } else { recFallback.hidden = false; }
 
   var recorder = null;
-  var chunks = [];
-  var recordedSrc = null;
+  var recordedUrl = null;      /* blob: object URL for the learner's own recording */
   var activeStream = null;
   var discardRecording = false;
-  var recordAttempt = 0;
+  var recordAttempt = 0;       /* invalidates stale getUserMedia/permission results */
+  var permissionPending = false;
+
+  /* Try the preferred formats in order; fall back to the browser default
+     (an empty string tells MediaRecorder's constructor to pick one) if
+     isTypeSupported is unavailable or none of them are supported. */
+  var MIME_CANDIDATES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  function pickMimeType() {
+    if (!(window.MediaRecorder && typeof MediaRecorder.isTypeSupported === "function")) {
+      return "";
+    }
+    for (var i = 0; i < MIME_CANDIDATES.length; i += 1) {
+      try {
+        if (MediaRecorder.isTypeSupported(MIME_CANDIDATES[i])) { return MIME_CANDIDATES[i]; }
+      } catch (e) { /* keep trying the next candidate */ }
+    }
+    return "";
+  }
+
+  function releaseRecordedUrl() {
+    if (recordedUrl) {
+      try { URL.revokeObjectURL(recordedUrl); } catch (e) {}
+      recordedUrl = null;
+    }
+  }
 
   function stopMicrophone(discard) {
     if (discard) {
       discardRecording = true;
       recordAttempt += 1; /* invalidate any in-flight getUserMedia request */
     }
+    permissionPending = false;
     if (recorder && recorder.state !== "inactive") {
       try { recorder.stop(); } catch (e) {}
     }
@@ -1318,7 +1361,6 @@
       activeStream = null;
     }
     if (discard) {
-      chunks = [];
       if (recStart) { recStart.disabled = false; }
       if (recStop) { recStop.disabled = true; }
       if (recStatus) { recStatus.textContent = "Ready when you are."; }
@@ -1334,7 +1376,21 @@
 
   if (canRecord) {
     recStart.addEventListener("click", function () {
-      stopAudio();
+      /* Guard against a double-tap or an overlapping session: once a
+         permission request is pending, or a recording is already under
+         way, a second click does nothing until the first one resolves. */
+      if (permissionPending || (recorder && recorder.state === "recording")) { return; }
+
+      stopAudio();              /* stop model audio, and any playback of a
+                                    previous recording, before this starts */
+      releaseRecordedUrl();     /* the recording about to start will replace it */
+      recPlay.disabled = true;
+
+      permissionPending = true;
+      recStart.disabled = true;
+      recStop.disabled = true;
+      recStatus.textContent = "Waiting for microphone permission.";
+
       var myAttempt = (recordAttempt += 1);
       navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
         /* The learner may have left Screen 12 or pressed Record again
@@ -1345,19 +1401,36 @@
           stream.getTracks().forEach(function (track) { track.stop(); });
           return;
         }
+        permissionPending = false;
         activeStream = stream;
         discardRecording = false;
         var localChunks = [];
+        var mimeType = pickMimeType();
         try {
-          recorder = new MediaRecorder(stream);
+          recorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
         } catch (e) {
           stopMicrophone(true);
           showFallback("Recording could not start in this browser, so practise out loud instead.");
           return;
         }
-        chunks = localChunks;
+
+        /* If the microphone is unplugged or lost mid-recording, stop the
+           recorder gracefully instead of leaving it hanging. */
+        stream.getAudioTracks().forEach(function (track) {
+          track.addEventListener("ended", function () {
+            if (recorder && recorder.state === "recording") {
+              try { recorder.stop(); } catch (e) {}
+            }
+          });
+        });
+
         recorder.addEventListener("dataavailable", function (e) {
           if (e.data && e.data.size > 0) { localChunks.push(e.data); }
+        });
+        recorder.addEventListener("error", function (e) {
+          console.error("MediaRecorder error:", e && e.error ? e.error.name : e);
+          stopMicrophone(true);
+          recStatus.textContent = "Recording stopped unexpectedly. Please try again.";
         });
         recorder.addEventListener("stop", function () {
           stream.getTracks().forEach(function (t) { t.stop(); });
@@ -1367,19 +1440,21 @@
             return;
           }
           if (myAttempt !== recordAttempt) { return; } /* superseded by a newer attempt */
-          var blob = new Blob(localChunks, { type: recorder.mimeType || "audio/webm" });
-          var reader = new FileReader();
-          reader.addEventListener("load", function () {
-            recordedSrc = reader.result;   /* a Data URL, like the official recordings */
-            recPlay.disabled = false;
-            recStatus.textContent = "Recording saved on this page. Play it and listen to yourself.";
-          });
-          reader.addEventListener("error", function () {
-            console.error("Could not read the learner recording.");
-            recStatus.textContent = "That recording could not be saved. You can record again.";
-          });
-          reader.readAsDataURL(blob);
+
+          var blob = new Blob(localChunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+          if (!blob.size) {
+            recStart.disabled = false;
+            recStop.disabled = true;
+            recStatus.textContent = "No sound was recorded. Please try again.";
+            return;
+          }
+          recordedUrl = URL.createObjectURL(blob);
+          recPlay.disabled = false;
+          recStart.disabled = false;
+          recStop.disabled = true;
+          recStatus.textContent = "Recording saved on this page. Play it and listen to yourself.";
         });
+
         try {
           recorder.start();
         } catch (e) {
@@ -1390,24 +1465,43 @@
         recStart.disabled = true;
         recStop.disabled = false;
         recStatus.textContent = "Recording. Say: My name is Amina.";
-      }).catch(function () {
+      }).catch(function (error) {
         if (myAttempt !== recordAttempt) { return; }
-        recStatus.textContent = "The microphone is not available. Use the out-loud practice below instead.";
+        permissionPending = false;
+        activeStream = null;
+
+        var denied = error && (error.name === "NotAllowedError" || error.name === "PermissionDeniedError");
+        if (denied) {
+          /* Permission denial is not an unsupported browser: keep the
+             recording panel visible so the learner can grant access and
+             try again, rather than switching to the out-loud fallback. */
+          recStart.disabled = false;
+          recStop.disabled = true;
+          recStatus.textContent = "Microphone permission was denied. Allow microphone access in your browser settings, then try again.";
+          return;
+        }
+
+        /* Any other failure (no microphone found, device unreadable,
+           browser/OS block, etc.) is treated as recording being
+           unsupported here, so the learner gets the out-loud fallback. */
+        recStart.disabled = true;
+        recStop.disabled = true;
         showFallback("The microphone is not available, so practise out loud instead.");
       });
     });
 
     recStop.addEventListener("click", function () {
-      if (recorder && recorder.state !== "inactive") { recorder.stop(); }
+      if (!(recorder && recorder.state === "recording")) { return; }
       recStart.disabled = false;
       recStop.disabled = true;
       recStatus.textContent = "Stopped. Preparing your recording.";
+      recorder.stop();
     });
 
     recPlay.addEventListener("click", function () {
-      if (!recordedSrc) { return; }
+      if (!recordedUrl) { return; }
       playAudio(
-        recordedSrc,
+        recordedUrl,
         recStatus,
         "Playing your recording.",
         "Your recording has finished.",
