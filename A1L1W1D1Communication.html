@@ -944,25 +944,58 @@
   });
 
   /* ---------------- screen 9b: optional private recording ----------------
-     MOODLE / DEPLOYMENT NOTE: getUserMedia() only works when three things
-     outside this file are already true, and no JavaScript in this activity
-     can override any of them:
-       1. This activity is served over HTTPS (getUserMedia is blocked on
-          plain HTTP except on localhost).
-       2. If this file is embedded in a Moodle iframe (e.g. an mp4/HTML
-          "Page" or "URL" resource, or a SCORM player that iframes its
-          content), that iframe's tag must include allow="microphone"
-          (and ideally allow="microphone; autoplay" as needed) or the
-          browser will refuse the permission prompt before the learner
-          ever sees it.
-       3. The site's Permissions-Policy (or legacy Feature-Policy) HTTP
-          response header must not exclude microphone, e.g. a header of
-          Permissions-Policy: microphone=() anywhere upstream will silently
-          block getUserMedia() regardless of what this page does.
-     If recording never even reaches the "Waiting for microphone
-     permission" state, or the permission prompt never appears, check
-     these three settings on the Moodle/server side first - they cannot be
-     fixed from inside this HTML file. --------------------------------- */
+     MOODLE / DEPLOYMENT NOTE: getUserMedia() only works when several
+     things outside this file are already true, and no JavaScript in this
+     activity - nothing below this comment - can override any of them:
+
+       1. HTTPS. This activity, and the Moodle page that loads it, must
+          both be served over HTTPS (or http://localhost for local
+          testing). window.isSecureContext is checked below and blocks
+          the request with an explicit message if this isn't met, but the
+          fix itself is a server/hosting change, not a code change here.
+
+       2. The PARENT iframe's `allow` attribute. If Moodle loads this file
+          inside an <iframe> (an "URL"/"Page" resource, a SCORM player,
+          an embedded H5P-style wrapper, etc.), permission must be
+          granted on that outer iframe tag - not inside this HTML, which
+          has no iframe of its own and must not be given one. Whichever
+          Moodle theme, activity module, or renderer generates that
+          iframe needs:
+
+              <iframe
+                src="COMMUNICATION_FILE_URL"
+                allow="microphone"
+                title="Communication Mission">
+              </iframe>
+
+          If that generated iframe already has an allow attribute, add
+          microphone to the existing list rather than replacing it, e.g.:
+
+              <iframe
+                src="COMMUNICATION_FILE_URL"
+                allow="microphone; fullscreen"
+                title="Communication Mission">
+              </iframe>
+
+          Also confirm the iframe's `sandbox` attribute (if any) is not
+          restrictive enough to block microphone use even with `allow`
+          set - a sandbox without "allow-same-origin" combined with
+          certain permission restrictions can still prevent access.
+
+       3. The `Permissions-Policy` HTTP response header (or legacy
+          `Feature-Policy`) sent by the Moodle server must not exclude
+          microphone for this activity's real origin, e.g. a header of
+          `Permissions-Policy: microphone=()` anywhere upstream silently
+          blocks getUserMedia() regardless of what this page does. If a
+          policy is set, scope it to the actual trusted origin that
+          serves this activity (e.g. `microphone=(self "https://your-
+          moodle-domain.example")`) rather than an unrestricted `*`.
+
+     None of the three items above can be detected, worked around, or
+     repaired from inside this HTML file - they are Moodle/server/hosting
+     configuration, not application code. If recording never reaches the
+     "Waiting for microphone permission" state, or the permission prompt
+     never appears, check these three first. --------------------------- */
   var recBtn = $("recBtn"), stopBtn = $("stopBtn"), playRecBtn = $("playRecBtn"),
       againBtn = $("againBtn"), delBtn = $("delBtn"), recStatus = $("recStatus");
 
@@ -1040,7 +1073,15 @@
     if(recording || permissionPending) return;
 
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){
-      recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+      recStatus.textContent = "Recording is not available in this browser. You can still complete the speaking activity aloud.";
+      return;
+    }
+    /* getUserMedia() is only available in a secure context (HTTPS, or
+       http://localhost for local testing). Check this before ever
+       requesting the microphone, so the learner gets an accurate reason
+       instead of a silent failure or a generic permission error. */
+    if(!window.isSecureContext){
+      recStatus.textContent = "Microphone recording requires a secure HTTPS connection.";
       return;
     }
 
@@ -1070,7 +1111,7 @@
         localRecorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
       }catch(e){
         releaseStream();
-        recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+        recStatus.textContent = "Recording is not available in this browser. You can still complete the speaking activity aloud.";
         updateRecButtons();
         return;
       }
@@ -1119,7 +1160,7 @@
         localRecorder.start();
       }catch(e){
         releaseStream();
-        recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+        recStatus.textContent = "Recording is not available in this browser. You can still complete the speaking activity aloud.";
         updateRecButtons();
         return;
       }
@@ -1130,16 +1171,24 @@
     }).catch(function(err){
       if(myAttempt !== recordAttempt) return;
       permissionPending = false;
-      var denied = err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError");
-      if(denied){
-        /* Permission denial is not proof the browser lacks recording
-           support: leave the recording controls active so the learner
-           can grant access and try again. */
-        recStatus.textContent = "Microphone permission was denied. Allow microphone access in your browser settings, then try again.";
+
+      /* Distinguish the actual microphone error rather than lumping
+         everything into one generic message. Record is never left
+         permanently disabled here - updateRecButtons() re-enables it in
+         every branch below, so the learner can change the browser
+         permission (or plug in a microphone, or close the other app)
+         and press Record again. */
+      var name = err && err.name;
+      if(name === "NotAllowedError" || name === "SecurityError"){
+        recStatus.textContent = "Microphone access was blocked. Select the microphone icon in your browser\u2019s address bar, allow microphone access for this site, then press Record again.";
+      }else if(name === "NotFoundError" || name === "DevicesNotFoundError"){
+        recStatus.textContent = "No microphone was found. Connect or enable a microphone, then try again.";
+      }else if(name === "NotReadableError" || name === "TrackStartError"){
+        recStatus.textContent = "The microphone is being used by another application. Close the other application, then try again.";
+      }else if(!window.isSecureContext){
+        recStatus.textContent = "Microphone recording requires a secure HTTPS connection.";
       }else{
-        /* No microphone found, device already in use, insecure (non-HTTPS)
-           context, etc. - a genuine lack of usable recording here. */
-        recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+        recStatus.textContent = "Recording is not available in this browser. You can still complete the speaking activity aloud.";
       }
       updateRecButtons();
     });
