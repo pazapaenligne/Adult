@@ -641,6 +641,7 @@ button[disabled]{
       </div>
 
       <div class="pz-actions">
+        <button type="button" class="pz-btn-quiet" id="btn-try-again">Try again</button>
         <button type="button" class="pz-btn-primary" id="btn-done" disabled>Done</button>
       </div>
 
@@ -1308,6 +1309,46 @@ function initNav(){
       }
     });
   }
+
+  var again = document.getElementById("btn-try-again");
+  if (again){
+    again.addEventListener("click", function(){
+      resetActivity();
+    });
+  }
+}
+
+/* ===========================================================================
+   10. TRY AGAIN — a full reset of every exercise's learner state, not just
+   the screen shown. Each initX() function already clears and rebuilds its
+   own container, so re-calling them is safe; the module-level trackers
+   they don't reset themselves (placed words, match progress, profile
+   progress, completion) are cleared here first.
+   =========================================================================== */
+function resetActivity(){
+  placed = { age: [], lang: [] };
+  selectedQ = null;
+  matchedCount = 0;
+  profileDone = [false, false, false];
+  completionSent = false;
+  completionResult = null;
+
+  initBuild("age");
+  initBuild("lang");
+  for (var i = 0; i < GAPS.length; i++){ initGap(GAPS[i]); }
+  initMatch();
+  initProfile();
+
+  var carryIds = ["on-age", "on-q", "on-lang", "on-two", "on-match", "on-profile"];
+  for (var c = 0; c < carryIds.length; c++){ hideCarryOn(carryIds[c]); }
+
+  var feedbackIds = ["fb-age", "fb-q", "fb-lang", "fb-two", "fb-match", "fb-profile", "fb-done"];
+  for (var f = 0; f < feedbackIds.length; f++){ clearFeedback(feedbackIds[f]); }
+
+  var done = document.getElementById("btn-done");
+  if (done) done.disabled = true;
+
+  showScreen(1);
 }
 
 function init(){
