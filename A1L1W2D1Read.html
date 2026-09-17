@@ -1326,16 +1326,19 @@ var audioPendingConfirmation = {};
   }
 
   /* ---------------- Completion ----------------
-     completionSent latches only after the LMS has confirmed all three
-     operations. A failed attempt leaves it false so the learner can retry. */
+     Local completion is shown to the learner as soon as Done is pressed on
+     the final screen; it is never withheld or reported as failed just
+     because no LMS is present, or an LMS call did not succeed. SCORM
+     reporting is attempted once, best-effort, in the background: any
+     failure is logged only (see reportCompletion above) and never shown to
+     the learner or used to block/retry the local completion. */
   var completionSent = false;
 
   function activityCompleted() {
-    if (completionSent) { return true; }
-    if (!reportCompletion()) { return false; }
+    if (completionSent) { return; }
     completionSent = true;
+    reportCompletion();
     console.log("W2L1 Step 5 completed");
-    return true;
   }
 
   if (doneBtn) {
@@ -1344,15 +1347,7 @@ var audioPendingConfirmation = {};
       if (currentScreenId !== FINAL_SCREEN_ID) { return; }
       if (completionSent) { return; }
 
-      if (!activityCompleted()) {
-        doneBtn.disabled = false;
-        doneBtn.textContent = "Done";
-        if (doneFeedback) {
-          doneFeedback.textContent = "Completion could not be sent. Please try again, or contact support if the problem continues.";
-          doneFeedback.className = "feedback retry";
-        }
-        return;
-      }
+      activityCompleted();
 
       doneBtn.disabled = true;
       doneBtn.textContent = "Done \u2713";
