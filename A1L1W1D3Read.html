@@ -959,6 +959,7 @@ button[aria-disabled="true"]{
     </div>
 
     <div class="btnrow">
+      <button type="button" class="btn-quiet" id="tryAgainBtn" aria-label="Go back and practise this step again">Try again</button>
       <button type="button" class="btn-done" id="doneBtn" disabled aria-label="Finish this step and record completion">Done</button>
     </div>
     <p class="feedback" id="completionMsg" aria-live="polite"></p>
@@ -1441,6 +1442,8 @@ button[aria-disabled="true"]{
   var TOTAL = 8;
   var current = 1;
   var doneBtn = document.getElementById("doneBtn");
+  var tryAgainBtn = document.getElementById("tryAgainBtn");
+  var completionMsg = document.getElementById("completionMsg");
   var progressItems = document.getElementById("progress").children;
   var progressText = document.getElementById("progressText");
 
@@ -1481,7 +1484,13 @@ button[aria-disabled="true"]{
     updateProgress();
     mountShared(to);
 
-    if (current === TOTAL) { doneBtn.disabled = false; }
+    /* Done is only ever enabled on the final screen, and never re-offered
+       once completion has already been sent (see completionSent below). */
+    if (current === TOTAL) {
+      doneBtn.disabled = !!completionSent;
+    } else {
+      doneBtn.disabled = true;
+    }
 
     var heading = to.querySelector("h1, h2");
     if (heading) { heading.focus(); }
@@ -1501,6 +1510,16 @@ button[aria-disabled="true"]{
   })();
 
   updateProgress();
+
+  /* TRY AGAIN — returns to the start so the learner can redo the practice
+     screens. This never touches completionSent: if Done has already been
+     sent once, it stays sent (see the standing "fires exactly once" rule);
+     replaying the practice screens is just rehearsal, not a new attempt. */
+  tryAgainBtn.addEventListener("click", function () {
+    completionMsg.classList.remove("shown");
+    completionMsg.textContent = "";
+    goTo(1);
+  });
 
   /* =========================================================================
      COMPLETION — SCORM 2004 and 1.2. Fires once. Moodle is reported as having
@@ -1602,11 +1621,8 @@ button[aria-disabled="true"]{
     var saved = reportScorm();
     notifyMoodle();
 
-    var msg = document.getElementById("completionMsg");
-    msg.classList.add("shown");
-    msg.textContent = saved
-      ? "Activity complete. Completion has been sent to Moodle."
-      : "Activity complete. This page could not reach Moodle, so completion is recorded here only.";
+    completionMsg.classList.add("shown");
+    completionMsg.textContent = "Activity complete.";
   });
 
 })();
