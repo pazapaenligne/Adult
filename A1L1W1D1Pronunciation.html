@@ -987,6 +987,7 @@
   <div class="navbar-inner">
     <button type="button" class="btn btn-ghost" id="backBtn" disabled>← Back</button>
     <button type="button" class="btn btn-next" id="nextBtn">Next →</button>
+    <button type="button" class="btn btn-ghost" id="tryAgainBtn" hidden>↻ Try again</button>
     <button type="button" class="btn btn-done" id="doneBtn" hidden disabled>Done</button>
   </div>
 </nav>
@@ -1124,6 +1125,7 @@
   var backBtn   = document.getElementById("backBtn");
   var nextBtn   = document.getElementById("nextBtn");
   var doneBtn   = document.getElementById("doneBtn");
+  var tryAgainBtn = document.getElementById("tryAgainBtn");
   var counter   = document.getElementById("counter");
   var fill      = document.getElementById("progressFill");
   var reduce    = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1145,6 +1147,7 @@
     nextBtn.hidden = last;
     doneBtn.hidden = !last;
     doneBtn.disabled = !last;
+    tryAgainBtn.hidden = !last;
 
     stopAudio();
 
@@ -1181,6 +1184,22 @@
         ? "Activity complete. You are ready for Build Useful English."
         : "Activity complete. You are ready for Build Useful English. Moodle confirmation is unavailable.";
     }
+  });
+
+  /* ---------- Try again — reset and return to the start ---------- */
+  var readyDefaultText = "You are ready for Build Useful English.";
+  tryAgainBtn.addEventListener("click", function () {
+    stopAudio();
+    stopMicrophone(true);
+    completionSent = false;
+    doneBtn.disabled = true;
+    doneBtn.textContent = "Done";
+    var ready = document.querySelector("#s15 .ready");
+    if (ready) { ready.textContent = readyDefaultText; }
+    var selfCheckFeedback = document.getElementById("selfCheckFeedback");
+    if (selfCheckFeedback) { selfCheckFeedback.hidden = true; }
+    index = 0;
+    render(true);
   });
 
   /* ---------- ONE AUDIO ENGINE — one sound at a time ---------- */
