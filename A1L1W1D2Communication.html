@@ -507,7 +507,10 @@ legend{ font-family: var(--pz-head); font-weight:900; font-size:1.1rem; padding:
 
     <p class="pz-feedback ok" id="complete-msg" tabindex="-1" role="status" hidden>Activity complete. <span class="fr" lang="fr">Activité terminée.</span></p>
 
-    <p><a class="pz-btn" id="next-link" href="#" rel="noopener" hidden>Go to the next activity</a></p>
+    <div class="pz-actions">
+      <button type="button" class="pz-btn pz-btn-quiet" id="try-again-btn">Try again</button>
+      <a class="pz-btn" id="next-link" href="#" rel="noopener" hidden>Go to the next activity</a>
+    </div>
   </section>
 </main>
 
@@ -973,6 +976,54 @@ $("#done-btn").addEventListener("click", function(){
   } else {
     try { $("#complete-msg").focus(); } catch (e) {}
   }
+});
+
+/* ===========================================================================
+   Try again — resets every choice, the recording, and completion state,
+   then returns to Screen 1. completionSent is cleared so a fresh attempt
+   can report completion again; this never calls an LMS Terminate/Finish,
+   so only this activity's on-page state is touched, not the Moodle
+   session itself.
+   =========================================================================== */
+$("#try-again-btn").addEventListener("click", function(){
+  cancelRecording();
+  note("");
+
+  state.woman = null;
+  state.age = null;
+  state.lang = null;
+  state.learn = null;
+
+  $all('input[name="woman"]').forEach(function(r){ r.checked = false; });
+  $all('input[name="age"]').forEach(function(r){ r.checked = false; });
+  $all('input[name="lang"]').forEach(function(r){ r.checked = false; });
+  $all('input[name="learn"]').forEach(function(r){ r.checked = false; });
+
+  $("#name-sentence").textContent = "Hello. I’m Nadia.";
+  $("#s3-next").disabled = true;
+  $("#s3-fb").hidden = true;
+  $("#s4-next").disabled = true;
+  $("#s4-fb").hidden = true;
+  $("#s6-fb").hidden = true;
+
+  renderInto("#build-preview");
+  ["#check-preview","#written-preview","#voice-preview"].forEach(function(sel){
+    var box = $(sel);
+    if (box) box.innerHTML = "";
+  });
+  refreshCheck();
+
+  completionSent = false;
+  var done = $("#done-btn");
+  done.textContent = "Done";
+  $("#done-note").textContent = "Done becomes active on the last screen.";
+  $("#complete-msg").hidden = true;
+
+  var link = $("#next-link");
+  link.hidden = true;
+  link.removeAttribute("href");
+
+  showScreen("s1");
 });
 
 /* ===========================================================================
