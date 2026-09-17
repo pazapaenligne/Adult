@@ -917,6 +917,9 @@ footer .fr{color:var(--pz-dark);}
     </div>
     <p class="feedback" id="doneFeedback" role="status" aria-live="polite"></p>
     <p id="nextWrap" hidden><a class="next-link" id="nextLink" href="#">Go to the next activity</a></p>
+    <div class="actions">
+      <button type="button" class="btn btn-quiet" id="tryAgainBtn">Try again</button>
+    </div>
   </section>
 </main>
 
@@ -1761,16 +1764,19 @@ var audioPendingConfirmation = {};
   }
 
   /* ---------------- Completion ----------------
-     completionSent latches only after the LMS has confirmed all three
-     operations. A failed attempt leaves it false so the learner can retry. */
+     Local completion is shown to the learner as soon as Done is pressed on
+     the final screen; it is never withheld or reported as failed just
+     because no LMS is present, or an LMS call did not succeed. SCORM
+     reporting is attempted once, best-effort, in the background: any
+     failure is logged only (see reportCompletion above) and never shown to
+     the learner or used to block/retry the local completion. */
   var completionSent = false;
 
   function activityCompleted() {
-    if (completionSent) { return true; }
-    if (!reportCompletion()) { return false; }
+    if (completionSent) { return; }
     completionSent = true;
+    reportCompletion();
     console.log("W2L1 Step 6 completed");
-    return true;
   }
 
   if (doneBtn) {
@@ -1779,15 +1785,7 @@ var audioPendingConfirmation = {};
       if (currentScreenId !== FINAL_SCREEN_ID) { return; }
       if (completionSent) { return; }
 
-      if (!activityCompleted()) {
-        doneBtn.disabled = false;
-        doneBtn.textContent = "Done";
-        if (doneFeedback) {
-          doneFeedback.textContent = "Completion could not be sent. Please try again, or contact support if the problem continues.";
-          doneFeedback.className = "feedback retry";
-        }
-        return;
-      }
+      activityCompleted();
 
       doneBtn.disabled = true;
       doneBtn.textContent = "Done \u2713";
@@ -1808,6 +1806,62 @@ var audioPendingConfirmation = {};
     });
   }
 
+  /* ---------------- Try again ----------------
+     Resets every choice group (each one already exposes its own reset()
+     from the fixed-choice-group setup above, which also rewrites STATE),
+     closes the model panel, stops and clears any recording, restores Done
+     and the completion message/link, and returns to Screen 1.
+     completionSent is cleared so a fresh pass can report completion again;
+     this never calls an LMS Terminate/Finish, so only this activity's
+     on-page state and its own completion latch are touched, not the wider
+     Moodle session. Screen 7's multiple-choice question needs no manual
+     reset here: buildQuestion() rebuilds its options (and a fresh
+     "settled" closure) from scratch every time the learner reaches it via
+     Screen 6, so no stale state can survive a repeat. */
+  var tryAgainBtn = document.getElementById("tryAgainBtn");
+
+  function resetActivity() {
+    stopRecordingIfRunning();
+    releaseClip();
+    setVoiceButtons("idle");
+    if (voiceStatus) {
+      voiceStatus.textContent = "";
+      voiceStatus.className = "feedback";
+    }
+
+    for (var i = 0; i < groups.length; i++) {
+      if (typeof groups[i].reset === "function") { groups[i].reset(); }
+    }
+    refreshGate(document.getElementById("s3"));
+    refreshGate(document.getElementById("s4"));
+    refreshGate(document.getElementById("s5"));
+
+    if (modelPanel) { modelPanel.setAttribute("hidden", "hidden"); }
+    if (showModelBtn) {
+      showModelBtn.setAttribute("aria-expanded", "false");
+      showModelBtn.textContent = "Show the model";
+    }
+
+    completionSent = false;
+    if (doneBtn) {
+      doneBtn.disabled = true;
+      doneBtn.textContent = "Done";
+    }
+    if (doneFeedback) {
+      doneFeedback.textContent = "";
+      doneFeedback.className = "feedback";
+    }
+    var wrap = document.getElementById("nextWrap");
+    var link = document.getElementById("nextLink");
+    if (wrap) { wrap.setAttribute("hidden", "hidden"); }
+    if (link) { link.removeAttribute("href"); }
+
+    showScreen("s1");
+  }
+
+  if (tryAgainBtn) {
+    tryAgainBtn.addEventListener("click", resetActivity);
+  }
 
   /* ---------------- First screen only ---------------- */
   showScreen("s1", true);
