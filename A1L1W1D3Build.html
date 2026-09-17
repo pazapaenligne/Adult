@@ -15,11 +15,6 @@
    ========================================================================== */
 var CONFIG = {
 
-  /* Moodle parent origin for the completion postMessage.
-     Must be an exact "https://host" or "http://host" value.
-     NEVER use "*" as the destination origin. */
-  moodleOrigin: "",                 /* e.g. "https://moodle.pazapa.org"  <-- FILL BEFORE DEPLOYMENT */
-
   /* Absolute URL of the next activity (W1L3 Day 3, Read for Real Life).
      Leave empty to hide the "Next activity" link on the final screen. */
   nextActivityUrl: "",              /* <-- FILL BEFORE DEPLOYMENT */
@@ -1740,24 +1735,16 @@ body.no-fr .fr{ display:none; }
     }
 
     doneTasks = {};
+    completionSent = false;
+    doneBtn.textContent = "Done";
+    nextLink.hidden = true;
+    nextLink.removeAttribute("href");
     srLive.textContent = "The activities are ready again.";
     goTo("s-names");
   }
 
   if(againBtn){
     againBtn.addEventListener("click", restartActivities);
-  }
-
-  /* An exact origin only: scheme, host, optional valid port. Paths, query
-     strings, fragments, credentials, whitespace and wildcards are rejected. */
-  function isValidOrigin(value){
-    if(typeof value !== "string" || !value || /\s/.test(value)) return false;
-    try{
-      var parsed = new URL(value);
-      return (parsed.protocol === "https:" || parsed.protocol === "http:") &&
-             !parsed.username && !parsed.password &&
-             parsed.origin === value && parsed.hostname.indexOf(".") !== -1;
-    }catch(e){ return false; }
   }
 
   /* An absolute http(s) URL. A path, query or fragment is allowed here, but
@@ -1889,25 +1876,10 @@ body.no-fr .fr{ display:none; }
     var s2004 = reportScorm2004();
     var s12   = s2004 ? false : reportScorm12();
 
-    /* Never "*" and never an empty destination. An absent or invalid origin
-       simply means no message is posted; the activity still completes. */
-    var posted = false;
-    if(isValidOrigin(CONFIG.moodleOrigin)){
-      try{
-        window.parent.postMessage(
-          { type: "pazapa-activity-complete",
-            activity: "W1L3_DAY3_STEP4_BUILD_USEFUL_ENGLISH",
-            complete: true },
-          CONFIG.moodleOrigin
-        );
-        posted = true;
-      }catch(e){ console.error("Completion message failed:", e); }
-    }
-
     /* Reported, not confirmed: none of these channels tells us the LMS stored
-       anything, so nothing here claims that Moodle saved the result. */
+       anything. */
     console.log("Completion reported to — SCORM 2004:", s2004,
-                "| SCORM 1.2:", s12, "| Moodle message:", posted);
+                "| SCORM 1.2:", s12);
   }
 
   doneBtn.addEventListener("click", function(){
