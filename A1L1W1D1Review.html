@@ -742,6 +742,7 @@ mark{background:var(--yellow-20);padding:0 3px;border-radius:4px}
   <div class="nav">
     <button type="button" class="btn secondary" data-back>Back</button>
     <span class="spacer"></span>
+    <button type="button" class="btn secondary" id="tryAgainBtn">Try again</button>
     <button type="button" class="btn" id="doneBtn" disabled>Finish lesson</button>
     <a class="btn" id="nextActivityLink" rel="noopener noreferrer" hidden aria-label="Go to the next activity">Next activity</a>
   </div>
@@ -1296,6 +1297,32 @@ mark{background:var(--yellow-20);padding:0 3px;border-radius:4px}
       fbDone.textContent = '\u2713 Lesson 1 complete. Moodle confirmation is unavailable. You can return to the lesson map.';
     }
     revealNextActivity();
+  });
+
+  /* ---------- Try again — reset and return to the start ---------- */
+  document.getElementById('tryAgainBtn').addEventListener('click', function(){
+    stopActiveRecordings(true);
+    completionSent = false;
+    lessonFinished = false;
+    branch = null;
+
+    doneBtn.textContent = 'Finish lesson';
+    var fbDone = document.getElementById('fbDone');
+    fbDone.className = 'feedback';
+    fbDone.textContent = '';
+    var nextActivityLink = document.getElementById('nextActivityLink');
+    if(nextActivityLink){ nextActivityLink.hidden = true; }
+
+    branchNext.disabled = true;
+    document.querySelectorAll('.choice, .pick').forEach(function(b){
+      b.classList.remove('is-correct', 'is-wrong');
+      if(b.hasAttribute('aria-pressed')){ b.setAttribute('aria-pressed', 'false'); }
+    });
+    document.querySelectorAll('.feedback').forEach(function(f){
+      if(f.id !== 'fbDone'){ f.className = 'feedback'; f.textContent = ''; }
+    });
+
+    showScreen(screens[0]);
   });
 
   window.addEventListener('pagehide', function(){ stopActiveRecordings(true); });
