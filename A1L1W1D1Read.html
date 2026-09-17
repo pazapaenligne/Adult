@@ -650,6 +650,7 @@ mark{background:var(--yellow-20);padding:0 3px;border-radius:4px}
   <div class="nav">
     <button type="button" class="btn secondary" data-back>Back</button>
     <span class="spacer"></span>
+    <button type="button" class="btn secondary" id="tryAgainBtn">Try again</button>
     <button type="button" class="btn" id="doneBtn" disabled>Done</button>
   </div>
 </section>
@@ -964,17 +965,41 @@ mark{background:var(--yellow-20);padding:0 3px;border-radius:4px}
     if(result.method === 'scorm2004' || result.method === 'scorm1.2' || result.method === 'already-sent'){
       doneBtn.disabled = true;
       doneBtn.textContent = 'Done \u2713';
-      fbDone.textContent = '\u2713 Read for Real Life complete. Moodle saved your completion.';
+      fbDone.textContent = '\u2713 Read for Real Life complete.';
     } else if(result.method === 'postMessage'){
       doneBtn.disabled = true;
       doneBtn.textContent = 'Done \u2713';
-      fbDone.textContent = '\u2713 Read for Real Life complete. Completion was sent to Moodle.';
+      fbDone.textContent = '\u2713 Read for Real Life complete.';
     } else {
       /* Nothing succeeded. completionSent stays false, so the learner
          can select Done again later (e.g. if Moodle becomes available). */
-      fbDone.textContent = '\u2713 Read for Real Life complete. Moodle confirmation is unavailable. You can return to the lesson map.';
+      fbDone.textContent = '\u2713 Read for Real Life complete. You can return to the lesson map.';
     }
     revealNextActivityLinkIfConfigured();
+  });
+
+  /* ---------- Try again — reset and return to the start ---------- */
+  document.getElementById('tryAgainBtn').addEventListener('click', function(){
+    completionSent = false;
+    doneBtn.textContent = 'Done';
+    var fbDone = document.getElementById('fbDone');
+    fbDone.className = 'feedback';
+    fbDone.textContent = '';
+    var nextActivityWrap = document.getElementById('nextActivityWrap');
+    if(nextActivityWrap){ nextActivityWrap.hidden = true; }
+
+    completedGatedScreens = {};
+    document.querySelectorAll('.choice, .match-btn').forEach(function(b){
+      b.classList.remove('is-correct', 'is-wrong', 'is-selected');
+    });
+    document.querySelectorAll('.feedback').forEach(function(f){
+      if(f.id !== 'fbDone'){ f.className = 'feedback'; f.textContent = ''; }
+    });
+    document.querySelectorAll('#dialogue .line[aria-pressed]').forEach(function(line){
+      line.setAttribute('aria-pressed', 'false');
+    });
+
+    showScreen(0);
   });
 
   /* ---------- Initial state ---------- */
