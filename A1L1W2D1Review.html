@@ -729,6 +729,9 @@ footer.foot{margin-top:34px;padding-top:14px;border-top:2px solid var(--grey);fo
   <div class="btn-row">
     <button type="button" class="btn" id="btn-done" disabled>Done</button>
   </div>
+  <div class="btn-row">
+    <button type="button" class="btn-quiet" id="try-again">Try again</button>
+  </div>
 </section>
 
 </main>
@@ -1530,6 +1533,105 @@ $("btn-done").addEventListener("click",function(){
   $("btn-done").disabled=true;
   say($("fb-done"),FB_CONF,"good");
 });
+
+/* =========================================================================
+   TRY AGAIN — rebuilds every screen from scratch.
+   Each build function above only appends content, so its container is
+   cleared first, and each screen's own state (matchDone, timeDone,
+   correctDone, orderNow, improveDone, pick, retryItems, retryDone) is reset
+   before the build function runs again, so a repeat pass starts exactly
+   like the first one did. stopVoiceActivity() already covers the voice
+   screen's own reset: it stops any recording, releases the microphone, and
+   clears the clip and its buttons. completionSent is cleared so Done can
+   be pressed again; this never touches an LMS, since this activity reports
+   completion only through activityCompleted() above, with no SCORM, xAPI
+   or postMessage call anywhere in this file (see the header notes).
+   ========================================================================= */
+function clearFb(node){
+  node.textContent="";
+  node.className="fb";
+}
+
+function resetActivity(){
+  /* 2. Quick action review */
+  $("match-words").innerHTML="";
+  $("match-cards").innerHTML="";
+  matchPicked=null;matchDone=0;
+  clearFb($("fb-match"));
+  $("next-match").disabled=true;
+  buildMatch();
+
+  /* 3. Complete the time */
+  $("time-1").innerHTML="";
+  $("time-2").innerHTML="";
+  timeDone={"time-1":false,"time-2":false};
+  clearFb($("fb-time"));
+  $("next-time").disabled=true;
+  buildTime();
+
+  /* 4. Correct or correct it */
+  $("correct-items").innerHTML="";
+  correctDone=0;
+  clearFb($("fb-correct"));
+  $("next-correct").disabled=true;
+  buildCorrect();
+
+  /* 5. Put the day in order */
+  orderNow=shuffle(ORDER_RIGHT.slice());
+  if(orderNow.join("|")===ORDER_RIGHT.join("|")){
+    orderNow.push(orderNow.shift());
+  }
+  clearFb($("fb-order"));
+  $("next-order").disabled=true;
+  $("order-check").disabled=false;
+  renderOrder();
+
+  /* 6. Find the missing action */
+  $("missing-opts").innerHTML="";
+  clearFb($("fb-missing"));
+  $("next-missing").disabled=true;
+  buildMissing();
+
+  /* 7. Improve a routine */
+  $("improve-items").innerHTML="";
+  improveDone=0;
+  clearFb($("fb-improve"));
+  $("next-improve").disabled=true;
+  buildImprove();
+
+  /* 8. Private retry */
+  pick={name:null,wake:null,morning:null,evening:null,bed:null};
+  $("r-name").innerHTML="";
+  $("r-wake").innerHTML="";
+  $("r-morning").innerHTML="";
+  $("r-evening").innerHTML="";
+  $("r-bed").innerHTML="";
+  $("retry-items").innerHTML="";
+  $("retry-build").hidden=true;
+  $("retry-result").hidden=true;
+  retryItems=[];retryDone=0;
+  clearFb($("fb-retry"));
+  $("next-retry").disabled=true;
+  buildRetryPicks();
+
+  /* 9. Optional voice retry */
+  stopVoiceActivity();
+  clearFb($("fb-voice"));
+
+  /* 10. Reflect */
+  var checks=document.querySelectorAll(".rf");
+  for(var i=0;i<checks.length;i++){checks[i].checked=false;}
+  clearFb($("fb-reflect"));
+
+  /* 11. Done */
+  completionSent=false;
+  $("btn-done").disabled=true;
+  clearFb($("fb-done"));
+
+  showScreen("s-welcome");
+}
+
+$("try-again").addEventListener("click",resetActivity);
 
 /* =========================================================================
    BUILD
