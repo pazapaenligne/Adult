@@ -576,11 +576,20 @@
     if(window.speechSynthesis){
       try{ window.speechSynthesis.cancel(); }catch(e){}
     }
+    /* isPlayingRecording / playRecBtn are declared further down in this
+       closure (Screen 9B recording code); by the time stopAudio() is ever
+       invoked at runtime the whole script has already run once, so both
+       are defined. This keeps "one sound at a time" true for the
+       learner's own recording as well as the model audio. */
+    if(typeof isPlayingRecording !== "undefined" && isPlayingRecording){
+      isPlayingRecording = false;
+      if(playRecBtn){ playRecBtn.textContent = "Play my recording"; }
+    }
   }
   var stopAllAudio = stopAudio;
 
   function playSrc(src){
-    if(!src){ console.error("Missing audio source."); return; }
+    if(!src){ console.error("Missing audio source."); return null; }
     try{ player.pause(); player.currentTime = 0; }catch(e){}
     if(player.getAttribute("src") !== src){
       player.setAttribute("src", src);
@@ -590,6 +599,7 @@
     if(p && typeof p.catch === "function"){
       p.catch(function(err){ console.error("Audio playback failed:", err); });
     }
+    return p;
   }
 
   function playAudio(key){
@@ -933,11 +943,49 @@
     showScreen("s3");
   });
 
-  /* ---------------- screen 9b: optional private recording ---------------- */
+  /* ---------------- screen 9b: optional private recording ----------------
+     MOODLE / DEPLOYMENT NOTE: getUserMedia() only works when three things
+     outside this file are already true, and no JavaScript in this activity
+     can override any of them:
+       1. This activity is served over HTTPS (getUserMedia is blocked on
+          plain HTTP except on localhost).
+       2. If this file is embedded in a Moodle iframe (e.g. an mp4/HTML
+          "Page" or "URL" resource, or a SCORM player that iframes its
+          content), that iframe's tag must include allow="microphone"
+          (and ideally allow="microphone; autoplay" as needed) or the
+          browser will refuse the permission prompt before the learner
+          ever sees it.
+       3. The site's Permissions-Policy (or legacy Feature-Policy) HTTP
+          response header must not exclude microphone, e.g. a header of
+          Permissions-Policy: microphone=() anywhere upstream will silently
+          block getUserMedia() regardless of what this page does.
+     If recording never even reaches the "Waiting for microphone
+     permission" state, or the permission prompt never appears, check
+     these three settings on the Moodle/server side first - they cannot be
+     fixed from inside this HTML file. --------------------------------- */
   var recBtn = $("recBtn"), stopBtn = $("stopBtn"), playRecBtn = $("playRecBtn"),
       againBtn = $("againBtn"), delBtn = $("delBtn"), recStatus = $("recStatus");
 
-  var recorder = null, chunks = [], recUrl = null, micStream = null, recording = false;
+  var recorder = null;
+  var recUrl = null;
+  var micStream = null;
+  var recording = false;          /* true while MediaRecorder is actively recording */
+  var permissionPending = false;  /* true while a getUserMedia() request is in flight */
+  var isPlayingRecording = false; /* true while the shared player is playing the learner's own recording */
+  var recordAttempt = 0;          /* invalidates stale getUserMedia/permission results */
+
+  /* Try the preferred formats in order; fall back to the browser default
+     (an empty string tells the MediaRecorder constructor to pick one) if
+     isTypeSupported is unavailable or none of them are supported. */
+  var REC_MIME_CANDIDATES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  function pickRecordingMimeType(){
+    if(!(window.MediaRecorder && typeof MediaRecorder.isTypeSupported === "function")) return "";
+    for(var i = 0; i < REC_MIME_CANDIDATES.length; i += 1){
+      try{ if(MediaRecorder.isTypeSupported(REC_MIME_CANDIDATES[i])) return REC_MIME_CANDIDATES[i]; }
+      catch(e){ /* keep trying the next candidate */ }
+    }
+    return "";
+  }
 
   function releaseStream(){
     if(micStream){
@@ -946,9 +994,18 @@
     }
   }
 
+  function stopRecordingPlayback(statusText){
+    if(isPlayingRecording){
+      try{ player.pause(); player.currentTime = 0; }catch(e){}
+    }
+    isPlayingRecording = false;
+    playRecBtn.textContent = "Play my recording";
+    if(statusText !== undefined){ recStatus.textContent = statusText; }
+  }
+
   function clearRecording(){
+    stopRecordingPlayback();
     if(recUrl){
-      stopAudio();
       if(player.getAttribute("src") === recUrl){ player.removeAttribute("src"); }
       try{ URL.revokeObjectURL(recUrl); }catch(e){}
       recUrl = null;
@@ -956,65 +1013,134 @@
   }
 
   function abortRecording(){
+    recordAttempt += 1;      /* invalidate any in-flight getUserMedia request */
+    permissionPending = false;
     if(recorder && recording){
       try{ recorder.stop(); }catch(e){}
     }
     recording = false;
     releaseStream();
-    stopAudio();
+    stopRecordingPlayback();
     updateRecButtons();
   }
 
   function updateRecButtons(){
-    recBtn.disabled     = recording;
+    recBtn.disabled     = recording || permissionPending;
     stopBtn.disabled    = !recording;
-    playRecBtn.disabled = recording || !recUrl;
-    againBtn.disabled   = recording || !recUrl;
-    delBtn.disabled     = recording || !recUrl;
+    playRecBtn.disabled = recording || permissionPending || !recUrl;
+    againBtn.disabled   = recording || permissionPending || !recUrl;
+    delBtn.disabled     = recording || permissionPending || !recUrl;
   }
 
   function startRecording(){
-    if(recording) return;
-    stopAudio();   /* one sound at a time: never record over the model audio */
+    /* No overlapping sessions and no stale double-clicks: once a
+       permission request is pending, or a recording is already under
+       way, a second call (Record double-tap, or Record-again while
+       recording) does nothing until the first one resolves. */
+    if(recording || permissionPending) return;
+
     if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){
       recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
       return;
     }
-    recStatus.textContent = "Please allow the microphone.";
+
+    stopAudio();          /* stop model audio, and any playback of a previous recording */
+    clearRecording();     /* Record again must cleanly replace any previous recording */
+
+    permissionPending = true;
+    updateRecButtons();
+    recStatus.textContent = "Waiting for microphone permission.";
+
+    var myAttempt = (recordAttempt += 1);
     navigator.mediaDevices.getUserMedia({ audio:true }).then(function(stream){
-      micStream = stream;
-      chunks = [];
-      try{ recorder = new MediaRecorder(stream); }
-      catch(e){
-        releaseStream();
-        recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+      /* The learner may have left Screen 9B, or pressed Record/Record
+         again again, while the permission prompt was open. A stream that
+         resolves after its attempt has been superseded is released
+         immediately instead of starting a hidden recording. */
+      if(myAttempt !== recordAttempt){
+        stream.getTracks().forEach(function(t){ t.stop(); });
         return;
       }
-      recorder.ondataavailable = function(ev){
-        if(ev.data && ev.data.size > 0) chunks.push(ev.data);
-      };
-      recorder.onstop = function(){
+      permissionPending = false;
+      micStream = stream;
+      var localChunks = [];               /* each attempt keeps its own buffer */
+      var mimeType = pickRecordingMimeType();
+      var localRecorder;
+      try{
+        localRecorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
+      }catch(e){
+        releaseStream();
+        recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+        updateRecButtons();
+        return;
+      }
+      recorder = localRecorder;
+
+      /* If the microphone is unplugged or lost mid-recording, stop the
+         recorder gracefully instead of leaving it hanging. */
+      stream.getAudioTracks().forEach(function(track){
+        track.addEventListener("ended", function(){
+          if(localRecorder.state === "recording"){
+            try{ localRecorder.stop(); }catch(e){}
+          }
+        });
+      });
+
+      localRecorder.addEventListener("dataavailable", function(ev){
+        if(ev.data && ev.data.size > 0) localChunks.push(ev.data);
+      });
+      localRecorder.addEventListener("error", function(ev){
+        console.error("MediaRecorder error:", ev && ev.error ? ev.error.name : ev);
+        if(myAttempt !== recordAttempt) return;
         recording = false;
         releaseStream();
-        if(chunks.length){
-          clearRecording();
-          var blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-          recUrl = URL.createObjectURL(blob);
-          recStatus.textContent = "Your recording is ready. It stays on this device.";
-        }
-        chunks = [];
+        recStatus.textContent = "Recording stopped unexpectedly. Please try again.";
         updateRecButtons();
-      };
-      clearRecording();
+      });
+      localRecorder.addEventListener("stop", function(){
+        recording = false;
+        releaseStream();
+        if(myAttempt !== recordAttempt) return; /* superseded by a newer attempt */
+        if(localChunks.length){
+          var blob = new Blob(localChunks, { type: localRecorder.mimeType || mimeType || "audio/webm" });
+          if(blob.size > 0){
+            recUrl = URL.createObjectURL(blob);
+            recStatus.textContent = "Your recording is ready. Select Play my recording to hear it.";
+          }else{
+            recStatus.textContent = "No recording was captured. Please try again.";
+          }
+        }else{
+          recStatus.textContent = "No recording was captured. Please try again.";
+        }
+        updateRecButtons();
+      });
+
+      try{
+        localRecorder.start();
+      }catch(e){
+        releaseStream();
+        recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+        updateRecButtons();
+        return;
+      }
       recording = true;
-      recorder.start();
       recStatus.textContent = "Recording. Say your message, then press Stop.";
       updateRecButtons();
       stopBtn.focus();
-    }).catch(function(){
-      releaseStream();
-      recording = false;
-      recStatus.textContent = "The microphone is not available. You can still complete the mission.";
+    }).catch(function(err){
+      if(myAttempt !== recordAttempt) return;
+      permissionPending = false;
+      var denied = err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError");
+      if(denied){
+        /* Permission denial is not proof the browser lacks recording
+           support: leave the recording controls active so the learner
+           can grant access and try again. */
+        recStatus.textContent = "Microphone permission was denied. Allow microphone access in your browser settings, then try again.";
+      }else{
+        /* No microphone found, device already in use, insecure (non-HTTPS)
+           context, etc. - a genuine lack of usable recording here. */
+        recStatus.textContent = "Recording is not available in this browser. You can still complete the mission.";
+      }
       updateRecButtons();
     });
   }
@@ -1024,14 +1150,48 @@
 
   stopBtn.addEventListener("click", function(){
     if(recorder && recording){
-      try{ recorder.stop(); }catch(e){ recording = false; releaseStream(); updateRecButtons(); }
+      recStatus.textContent = "Stopped. Preparing your recording.";
+      try{ recorder.stop(); }
+      catch(e){ recording = false; releaseStream(); updateRecButtons(); }
     }
   });
 
   playRecBtn.addEventListener("click", function(){
+    if(recording || permissionPending) return;
+    if(isPlayingRecording){
+      stopRecordingPlayback();   /* Stop playback: does not delete the recording */
+      return;
+    }
     if(!recUrl) return;
-    stopAudio();
-    playSrc(recUrl);
+    stopAudio();   /* never let model audio and the learner's recording overlap */
+    isPlayingRecording = true;
+    playRecBtn.textContent = "Stop playback";
+    recStatus.textContent = "Playing your recording.";
+    var p = playSrc(recUrl);
+    if(p && typeof p.catch === "function"){
+      p.catch(function(err){
+        console.error("Recording playback failed:", err);
+        isPlayingRecording = false;
+        playRecBtn.textContent = "Play my recording";
+        recStatus.textContent = "Your recording could not be played. Please record it again.";
+      });
+    }
+  });
+
+  /* Real playback state, reported into the existing aria-live status area. */
+  player.addEventListener("ended", function(){
+    if(isPlayingRecording){
+      isPlayingRecording = false;
+      playRecBtn.textContent = "Play my recording";
+      recStatus.textContent = "Your recording has finished.";
+    }
+  });
+  player.addEventListener("error", function(){
+    if(isPlayingRecording){
+      isPlayingRecording = false;
+      playRecBtn.textContent = "Play my recording";
+      recStatus.textContent = "Your recording could not be played. Please record it again.";
+    }
   });
 
   delBtn.addEventListener("click", function(){
