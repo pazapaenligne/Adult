@@ -878,6 +878,7 @@ body.no-fr .fr{ display:none; }
           aria-valuenow="1"
           aria-live="polite">Screen 1 of 7</span>
     <span class="spacer"></span>
+    <button type="button" class="btn-quiet" id="tryAgainBtn" disabled>Try again</button>
     <button type="button" class="btn-done" id="doneBtn" disabled>Done</button>
   </div>
 </div>
@@ -896,6 +897,7 @@ body.no-fr .fr{ display:none; }
 
   var body      = document.body;
   var doneBtn   = document.getElementById("doneBtn");
+  var tryAgainBtn = document.getElementById("tryAgainBtn");
   var progress  = document.getElementById("progress");
   var srLive    = document.getElementById("srLive");
   var nextLink  = document.getElementById("nextLink");
@@ -1237,6 +1239,7 @@ body.no-fr .fr{ display:none; }
        arriving on the last screen. */
     var isLast = (idx === ORDER.length - 1);
     doneBtn.disabled = !isLast;
+    if(tryAgainBtn){ tryAgainBtn.disabled = !isLast; }
 
     var heading = nxt ? nxt.querySelector("h2") : null;
     if(heading){ heading.focus(); }
@@ -1432,6 +1435,68 @@ body.no-fr .fr{ display:none; }
       nextLink.focus();
     }
   });
+
+  /* ======================================================================
+     TRY AGAIN — full reset of every quiz screen, then back to Screen 1.
+     Mirrors the exact hidden/disabled state each element had on first
+     load: chained question blocks, "model" reveals, and "Carry on"
+     buttons are all put back to their original state, not just cleared
+     of colour classes, so a second run behaves identically to the first.
+     ====================================================================== */
+  function resetAllQuizzes(){
+    var groups = document.querySelectorAll("[data-question]");
+    for(var g=0; g<groups.length; g++){
+      var group = groups[g];
+      group.removeAttribute("data-answered");
+      var opts = group.querySelectorAll(".opt");
+      for(var i=0; i<opts.length; i++){
+        opts[i].classList.remove("is-correct", "is-retry");
+        opts[i].disabled = false;
+        setMark(opts[i], "");
+      }
+    }
+
+    /* Every feedback line, cleared. */
+    var feedbacks = document.querySelectorAll(".feedback");
+    for(var f=0; f<feedbacks.length; f++){ feedbacks[f].innerHTML = ""; }
+
+    /* Chained question blocks (data-next-block targets) hidden again. */
+    var chainTargets = document.querySelectorAll("[data-next-block]");
+    for(var c=0; c<chainTargets.length; c++){
+      var targetId = chainTargets[c].getAttribute("data-next-block");
+      var targetEl = targetId ? document.getElementById(targetId) : null;
+      if(targetEl){ targetEl.hidden = true; }
+    }
+
+    /* Written models hidden again; their "Show the words" buttons restored. */
+    var models = document.querySelectorAll(".model[id]");
+    for(var m=0; m<models.length; m++){
+      models[m].hidden = true;
+      var revealBtns = document.querySelectorAll('[data-reveal="' + models[m].id + '"]');
+      for(var r=0; r<revealBtns.length; r++){ revealBtns[r].hidden = false; }
+    }
+
+    /* Every "Carry on" button hidden again, except the very first Start
+       button on the welcome screen, which was never gated on an answer. */
+    var carryButtons = document.querySelectorAll(".btn-primary[data-go]");
+    for(var b=0; b<carryButtons.length; b++){
+      carryButtons[b].hidden = (carryButtons[b].getAttribute("data-go") !== "s-age");
+    }
+  }
+
+  if(tryAgainBtn){
+    tryAgainBtn.addEventListener("click", function(){
+      if(tryAgainBtn.disabled) return;
+      stopAudio();
+      completionSent = false;
+      doneBtn.disabled = true;
+      doneBtn.textContent = "Done";
+      nextLink.hidden = true;
+      srLive.textContent = "";
+      resetAllQuizzes();
+      goTo("s-welcome");
+    });
+  }
 
   /* ======================================================================
      STARTUP
