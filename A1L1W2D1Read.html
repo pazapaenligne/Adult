@@ -928,6 +928,9 @@ footer .fr{color:var(--pz-dark);}
     </div>
     <p class="feedback" id="doneFeedback" role="status" aria-live="polite"></p>
     <p id="nextWrap" hidden><a class="next-link" id="nextLink" href="#">Go to the next activity</a></p>
+    <div class="actions">
+      <button type="button" class="btn btn-quiet" id="tryAgainBtn">Try again</button>
+    </div>
   </section>
 </main>
 
@@ -976,6 +979,15 @@ var audioPendingConfirmation = {};
   var progressEl = document.getElementById("progress");
   var doneBtn = document.getElementById("doneBtn");
   var doneFeedback = document.getElementById("doneFeedback");
+  var tryAgainBtn = document.getElementById("tryAgainBtn");
+
+  /* Every interactive widget (a multiple-choice group or a word-bank gap
+     fill) registers its own reset function here. Try Again calls every one
+     of them, so each screen's local "already answered" state - which lives
+     in that screen's own closure, not in the DOM - is cleared correctly
+     rather than merely repainting classes over stale state. */
+  var optionResetters = [];
+  var bankResetters = [];
 
   /* ---------------- French help lines ---------------- */
   if (!CONFIG.showFrenchHelp) {
@@ -1071,6 +1083,17 @@ var audioPendingConfirmation = {};
           }
         });
       }
+      optionResetters.push(function () {
+        settled = false;
+        for (var r = 0; r < buttons.length; r++) {
+          buttons[r].disabled = false;
+          buttons[r].className = "option";
+        }
+        var fb = screen.querySelector(".feedback");
+        if (fb) { fb.textContent = ""; fb.className = "feedback"; }
+        var carryBack = screen.querySelector("button[data-next]");
+        if (carryBack) { carryBack.setAttribute("hidden", "hidden"); }
+      });
     })(optionGroups[g]);
   }
 
@@ -1133,6 +1156,23 @@ var audioPendingConfirmation = {};
       }
 
       markActive();
+      bankResetters.push(function () {
+        current = 0;
+        for (var i = 0; i < gaps.length; i++) {
+          gaps[i].textContent = "\u00A0";
+          gaps[i].className = "gap";
+          gaps[i].removeAttribute("aria-current");
+        }
+        for (var j = 0; j < words.length; j++) {
+          words[j].disabled = false;
+          words[j].className = "word";
+        }
+        var fb = screen.querySelector(".feedback");
+        if (fb) { fb.textContent = ""; fb.className = "feedback"; }
+        var carry = screen.querySelector("button[data-next]");
+        if (carry) { carry.setAttribute("hidden", "hidden"); }
+        markActive();
+      });
     })(banks[w]);
   }
 
@@ -1331,6 +1371,39 @@ var audioPendingConfirmation = {};
         }
       }
     });
+  }
+
+  /* ---------------- Try again ----------------
+     Resets every question and gap-fill screen (via the resetters they
+     registered above), restores Done and the completion message/link to
+     their starting state, and returns to Screen 1. completionSent is
+     cleared so a fresh pass can report completion again; this never calls
+     an LMS Terminate/Finish, so only this activity's on-page state and its
+     own completion latch are touched, not the wider Moodle session. */
+  function resetActivity() {
+    var i;
+    for (i = 0; i < optionResetters.length; i++) { optionResetters[i](); }
+    for (i = 0; i < bankResetters.length; i++) { bankResetters[i](); }
+
+    completionSent = false;
+    if (doneBtn) {
+      doneBtn.disabled = true;
+      doneBtn.textContent = "Done";
+    }
+    if (doneFeedback) {
+      doneFeedback.textContent = "";
+      doneFeedback.className = "feedback";
+    }
+    var wrap = document.getElementById("nextWrap");
+    var link = document.getElementById("nextLink");
+    if (wrap) { wrap.setAttribute("hidden", "hidden"); }
+    if (link) { link.removeAttribute("href"); }
+
+    showScreen("s1");
+  }
+
+  if (tryAgainBtn) {
+    tryAgainBtn.addEventListener("click", resetActivity);
   }
 
   /* ---------------- First screen only ---------------- */
