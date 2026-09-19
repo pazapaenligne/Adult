@@ -517,11 +517,9 @@ body.no-fr .fr{ display:none; }
         <span class="fr" lang="fr">Vous avez écouté pour trouver des informations sur les prix et les quantités.</span></p>
       <p>Next, you will practise pronunciation.
         <span class="fr" lang="fr">Ensuite, vous allez pratiquer la prononciation.</span></p>
-      <div class="audiobar">
-        <button type="button" class="btn-listen" data-play="L7_verymuch" aria-label="Listen: thank you very much">
-          <svg class="speaker" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 5V4L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 1.2v2.1a8.5 8.5 0 0 1 0 17.4v2.1a10.6 10.6 0 0 0 0-21.6z"/></svg>
-          Thank you very much
-        </button>
+      <div class="actions">
+        <button type="button" class="btn-quiet" id="tryAgainInline">Try again<span class="fr" lang="fr">Recommencer</span></button>
+        <button type="button" class="btn-done" id="doneBtnInline"><span class="label">Done</span><span class="fr" lang="fr">Terminé</span></button>
       </div>
     </div>
   </section>
@@ -555,6 +553,8 @@ body.no-fr .fr{ display:none; }
   var nextLink    = document.getElementById("nextLink");
   var frToggle    = document.getElementById("frToggle");
   var srLive      = document.getElementById("srLive");
+  var doneBtnInline    = document.getElementById("doneBtnInline");
+  var tryAgainInline   = document.getElementById("tryAgainInline");
   var transcriptToggle = document.getElementById("transcriptToggle");
   var fullTranscript   = document.getElementById("fullTranscript");
 
@@ -1139,6 +1139,7 @@ body.no-fr .fr{ display:none; }
     progress.textContent = "Screen " + (idx+1) + " of " + ORDER.length;
     var isLast = (idx === ORDER.length - 1);
     doneBtn.disabled = !isLast;
+    syncDoneInline();
     var heading = nxt ? nxt.querySelector("h2") : null;
     if(heading){ heading.focus(); }
     if(window.scrollTo){ window.scrollTo(0,0); }
@@ -1216,6 +1217,12 @@ body.no-fr .fr{ display:none; }
     }catch(error){ console.error("SCORM 2004 completion failed."); return false; }
   }
 
+  function syncDoneInline(){
+    var lbl = doneBtnInline.querySelector(".label");
+    if(lbl){ lbl.textContent = doneBtn.textContent; }
+    doneBtnInline.disabled = doneBtn.disabled;
+  }
+
   function activityCompleted(){
     if(completionSent) return true;
     console.log("W05D2 Listening Mission completed");
@@ -1239,7 +1246,6 @@ body.no-fr .fr{ display:none; }
     if(reported){ completionSent = true; saveState(); }
 
     if(!reported){
-      srLive.textContent = "Progress saved on this device. Moodle connection was not detected.";
       console.warn("No completion channel reported. Progress saved locally on this device. " +
                    "Moodle connection was not detected. Pressing Done again will retry, and this " +
                    "run will reconcile automatically if Moodle appears later.");
@@ -1259,7 +1265,11 @@ body.no-fr .fr{ display:none; }
       nextLink.hidden = false;
       nextLink.focus();
     }
+    syncDoneInline();
   });
+
+  doneBtnInline.addEventListener("click", function(){ doneBtn.click(); });
+  tryAgainInline.addEventListener("click", function(){ tryAgainBtn.click(); });
 
   /* ======================================================================
      PERSISTENCE — SCORM cmi.suspend_data first, localStorage as fallback.
@@ -1377,6 +1387,7 @@ body.no-fr .fr{ display:none; }
       completionSent = true;
       doneBtn.disabled = true;
       doneBtn.textContent = "Done \u2713";
+      syncDoneInline();
     }
   }
 
@@ -1444,6 +1455,7 @@ body.no-fr .fr{ display:none; }
      ====================================================================== */
   progress.textContent = "Screen 1 of " + ORDER.length;
   doneBtn.disabled = true;
+  syncDoneInline();
   setFrench(CONFIG.showFrench !== false);
   restoreUI(loadState());
 
