@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Build Useful English — Explaining Preferences and Problems</title>
+<style>
+  :root{
+    --pazapa-blue:#36BBD6;
+    --pazapa-blue-dark:#1B7E92;
+    --pazapa-green:#C9D646;
+    --pazapa-yellow:#FCC104;
+    --pazapa-red:#E6352B;
+    --pazapa-grey-light:#EBEBEB;
+    --pazapa-grey-dark:#2E2E2D;
+    --focus-ring: 3px solid #1B7E92;
+    box-sizing:border-box;
+  }
+  *,*::before,*::after{box-sizing:inherit;}
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Open Sans", Arial, sans-serif;
+    color:var(--pazapa-grey-dark);
+    background:#FAFAF9;
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  h1,h2,h3{
+    font-family:"Filson Soft", "Open Sans", Arial, sans-serif;
+    font-weight:800;
+    line-height:1.25;
+    margin:0 0 .5em 0;
+  }
+  h1{font-size:1.5rem;}
+  h2{font-size:1.25rem;}
+  h3{font-size:1.05rem;}
+  p{margin:0 0 .75em 0;}
+  .wrap{max-width:760px;margin:0 auto;padding:16px 16px 64px;}
+  header.app-header{
+    background:var(--pazapa-blue-dark);
+    color:#fff;
+    padding:14px 16px;
+  }
+  header.app-header .brandrow{
+    max-width:760px;margin:0 auto;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+  header.app-header .brandname{font-family:"Filson Soft","Open Sans",Arial,sans-serif;font-weight:800;font-size:1rem;letter-spacing:.02em;}
+  header.app-header .lesson-tag{font-size:.85rem;opacity:.95;}
+  .progress-track{
+    max-width:760px;margin:10px auto 0;padding:0 16px;
+    display:flex;gap:6px;
+  }
+  .progress-seg{
+    flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.35);
+  }
+  .progress-seg.done{background:var(--pazapa-green);}
+  .progress-seg.current{background:#fff;}
+  main{outline:none;}
+  section.screen{display:none;}
+  section.screen.active{display:block;}
+  .card{
+    background:#fff;
+    border:1px solid var(--pazapa-grey-light);
+    border-radius:14px;
+    padding:18px;
+    margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(46,46,45,.06);
+  }
+  .eyebrow{
+    display:inline-block;
+    font-size:.75rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--pazapa-blue-dark);
+    background:#E7F7FA;
+    padding:4px 10px;
+    border-radius:999px;
+    margin-bottom:10px;
+  }
+  .goal-box{
+    background:#FFF7E3;
+    border:1px solid #FCE7AE;
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  /* Screen 1: notice board of pinned patterns */
+  .notice-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+    gap:16px;
+    margin:14px 0 4px;
+  }
+  .notice-card{
+    position:relative;
+    background:#FFFDF6;
+    border:1px solid var(--pazapa-grey-light);
+    border-radius:4px 4px 12px 12px;
+    padding:18px 14px 14px;
+    box-shadow:0 3px 8px rgba(46,46,45,.08);
+  }
+  .notice-card::before{
+    content:"";
+    position:absolute;
+    top:-7px;left:50%;
+    transform:translateX(-50%) rotate(-2deg);
+    width:30px;height:12px;
+    border-radius:3px;
+    background:var(--pazapa-yellow);
+    box-shadow:0 2px 3px rgba(0,0,0,.15);
+  }
+  .notice-card:nth-child(3n+2)::before{background:var(--pazapa-green);}
+  .notice-card:nth-child(3n+3)::before{background:var(--pazapa-blue);}
+  .notice-card .sentence{font-size:1.02rem;display:block;margin-bottom:8px;}
+  .chip{
+    display:inline-block;
+    background:var(--pazapa-blue);
+    color:#0b3944;
+    font-weight:700;
+    padding:2px 8px;
+    border-radius:6px;
+    border-bottom:3px solid var(--pazapa-blue-dark);
+  }
+  .notice-card .pattern-note{
+    font-size:.85rem;
+    color:#3a3a39;
+    padding-top:8px;
+    margin-top:2px;
+    border-top:1px dashed var(--pazapa-grey-light);
+  }
+  /* Buttons */
+  button{
+    font-family:inherit;
+    font-size:1rem;
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+  .btn{
+    min-height:48px;
+    min-width:48px;
+    padding:10px 20px;
+    border-radius:10px;
+    border:2px solid var(--pazapa-blue-dark);
+    background:var(--pazapa-blue-dark);
+    color:#fff;
+    font-weight:700;
+    transition:background .15s,transform .05s;
+  }
+  .btn:hover{background:#155f6e;}
+  .btn:active{transform:translateY(1px);}
+  .btn:focus-visible{outline:var(--focus-ring);outline-offset:2px;}
+  .btn[disabled]{
+    background:#cfd3d2;border-color:#cfd3d2;color:#6b6b6a;cursor:not-allowed;
+  }
+  .btn.secondary{
+    background:#fff;color:var(--pazapa-blue-dark);
+  }
+  .btn.secondary:hover{background:#F3FBFD;}
+  .btn.help{
+    background:#fff;
+    color:#8a6400;
+    border-color:var(--pazapa-yellow);
+  }
+  .btn.help:hover{background:#FFF7E3;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+  /* Word chunk buttons */
+  .chunkbank, .built-row{
+    display:flex;flex-wrap:wrap;gap:8px;
+    min-height:52px;
+    align-items:center;
+  }
+  .built-row{
+    background:#F7F7F5;
+    border:2px dashed #d6d6d3;
+    border-radius:10px;
+    padding:10px;
+    margin-bottom:8px;
+  }
+  .built-row.valid{border-color:var(--pazapa-green);background:#F8FBEC;}
+  .built-row.invalid{border-color:var(--pazapa-yellow);background:#FFFBEF;}
+  .chunk-btn{
+    min-height:44px;
+    padding:8px 14px;
+    border-radius:9px;
+    border:2px solid var(--pazapa-blue-dark);
+    background:#fff;
+    color:var(--pazapa-grey-dark);
+    font-weight:600;
+  }
+  .chunk-btn:focus-visible{outline:var(--focus-ring);outline-offset:2px;}
+  .chunk-btn.placed{
+    background:var(--pazapa-blue-dark);
+    color:#fff;
+  }
+  .chunk-btn[disabled]{opacity:.35;cursor:not-allowed;}
+  /* Screen 2: order tickets */
+  .ticket{
+    background:#fff;
+    border:2px dashed #c7d6d4;
+    border-radius:4px;
+    padding:14px 16px;
+    margin-bottom:16px;
+    position:relative;
+  }
+  .ticket::before{
+    content:"";
+    position:absolute;
+    top:0;bottom:0;left:0;
+    width:4px;
+    background:var(--pazapa-blue);
+    border-radius:4px 0 0 4px;
+  }
+  .ticket:first-of-type{margin-top:0;}
+  .ticket-num{
+    display:inline-block;
+    font-family:"Courier New", monospace;
+    font-weight:800;font-size:.78rem;
+    color:var(--pazapa-blue-dark);
+    text-transform:uppercase;letter-spacing:.08em;
+    background:#F3FBFD;border:1px solid #D9F0F5;
+    border-radius:6px;padding:2px 8px;
+    margin-bottom:10px;
+  }
+  .status-line{
+    display:flex;align-items:center;gap:8px;
+    font-size:.92rem;
+    margin-top:6px;
+    min-height:1.4em;
+  }
+  .status-dot{
+    width:14px;height:14px;border-radius:50%;flex:0 0 auto;
+    display:inline-block;
+  }
+  .status-dot.ok{background:var(--pazapa-green);}
+  .status-dot.warn{background:var(--pazapa-yellow);}
+  .status-text.ok{color:#4b6b0a;font-weight:700;}
+  .status-text.warn{color:#8a6400;font-weight:700;}
+  /* Screen 3: staff memo pad */
+  .memo-intro{
+    display:flex;align-items:center;gap:10px;
+    background:#FFF7E3;border:1px solid #FCE7AE;
+    border-radius:10px;padding:10px 14px;
+    margin-bottom:14px;font-size:.9rem;
+  }
+  .memo-intro .pin-icon{
+    width:26px;height:26px;border-radius:50%;flex:0 0 auto;
+    background:var(--pazapa-yellow);color:#5a4400;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:.85rem;
+  }
+  .wordbank{
+    display:flex;flex-wrap:wrap;gap:8px;
+    margin:0 0 18px;
+    padding:12px 14px;
+    background:#F3FBFD;
+    border:1px dashed #b9dde6;
+    border-radius:999px;
+    justify-content:center;
+  }
+  .wordbank .chunk-btn{background:#fff;border-radius:999px;}
+  .gap-item{
+    display:flex;gap:12px;align-items:flex-start;
+    padding:14px 16px;
+    margin-bottom:12px;
+    background:#fff;
+    border:1px solid var(--pazapa-grey-light);
+    border-radius:0 12px 12px 0;
+    border-left:4px solid var(--pazapa-blue-dark);
+  }
+  .gap-num{
+    background:var(--pazapa-blue-dark);color:#fff;
+    width:26px;height:26px;border-radius:50%;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.82rem;font-weight:800;
+  }
+  .gap-sentence{font-size:1.02rem;}
+  .gap-input{
+    font-size:1rem;
+    padding:8px 10px;
+    min-height:44px;
+    border:2px solid #b9c4c3;
+    border-radius:8px;
+    width:150px;
+    max-width:60vw;
+  }
+  .gap-input:focus-visible{outline:var(--focus-ring);}
+  .gap-clue{font-size:.85rem;color:#5a5a58;font-style:italic;margin-top:4px;}
+  /* Screen 4: reference-card carousel */
+  .ref-card{
+    background:#fff;
+    border:1px solid var(--pazapa-grey-light);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow:0 2px 6px rgba(46,46,45,.06);
+  }
+  .ref-card-head{
+    display:flex;align-items:flex-start;gap:12px;
+    margin-bottom:12px;
+  }
+  .ref-num{
+    background:var(--pazapa-red);color:#fff;
+    width:30px;height:30px;border-radius:8px;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:.9rem;
+    transform:rotate(-3deg);
+  }
+  .ref-prompt{font-weight:700;flex:1;padding-top:3px;}
+  .pill-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .pill-option{
+    display:inline-flex;
+    align-items:center;
+    text-align:left;
+    background:#fff;
+    border:2px solid #b9c4c3;
+    border-radius:999px;
+    padding:10px 18px;
+    min-height:48px;
+    font-weight:600;
+    color:var(--pazapa-grey-dark);
+  }
+  .pill-option:focus-visible{outline:var(--focus-ring);outline-offset:2px;}
+  .pill-option[aria-pressed="true"]{
+    border-color:var(--pazapa-blue-dark);
+    background:#E7F7FA;
+  }
+  .reply-explain{
+    font-size:.9rem;
+    margin-top:10px;
+    padding:8px 10px;
+    border-radius:8px;
+    background:#F3FBFD;
+    border-left:4px solid var(--pazapa-blue);
+    display:none;
+  }
+  .reply-explain.show{display:block;}
+  /* Screen 5: Dialogue Lab as a message thread */
+  .thread{
+    display:flex;flex-direction:column;
+    background:#F7F4EC;
+    border-radius:14px;
+    padding:14px;
+    margin-bottom:6px;
+  }
+  .msg-row{display:flex;margin-bottom:10px;}
+  .msg-row.customer{justify-content:flex-start;}
+  .msg-row.server{justify-content:flex-end;}
+  .msg{
+    max-width:82%;
+    padding:10px 14px;
+    border-radius:16px;
+    font-weight:600;
+  }
+  .msg-row.customer .msg{
+    background:#fff;border:1px solid var(--pazapa-grey-light);
+    border-bottom-left-radius:4px;
+  }
+  .msg-row.server .msg{
+    background:var(--pazapa-blue-dark);color:#fff;
+    border-bottom-right-radius:4px;
+  }
+  .msg-speaker{
+    display:block;font-size:.72rem;font-weight:800;
+    text-transform:uppercase;letter-spacing:.04em;
+    margin-bottom:3px;opacity:.8;
+  }
+  .msg.broken{
+    background:#FFF7E3 !important;color:var(--pazapa-grey-dark) !important;
+    border:2px dashed var(--pazapa-yellow) !important;
+    text-decoration:line-through;
+  }
+  .choice-row{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px;}
+  .choice-row.customer{justify-content:flex-start;}
+  .choice-row.server{justify-content:flex-end;}
+  .choice-btn{
+    min-height:44px;
+    padding:8px 14px;
+    border-radius:999px;
+    border:2px solid #b9c4c3;
+    background:#fff;
+    font-weight:600;
+  }
+  .choice-btn[aria-pressed="true"]{border-color:var(--pazapa-blue-dark);background:#E7F7FA;}
+  .choice-btn:focus-visible{outline:var(--focus-ring);outline-offset:2px;}
+  .match-panels{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;}
+  .match-col{flex:1;min-width:220px;}
+  .match-col h4{margin:0 0 8px 0;font-size:.95rem;color:var(--pazapa-blue-dark);}
+  .match-chip{
+    display:block;width:100%;text-align:left;
+    min-height:48px;padding:9px 12px;margin-bottom:8px;
+    border-radius:10px;border:2px solid #b9c4c3;background:#fff;font-weight:600;
+  }
+  .match-chip[aria-pressed="true"]{border-color:var(--pazapa-blue-dark);background:#E7F7FA;}
+  .match-chip.paired{border-color:var(--pazapa-green);background:#F8FBEC;}
+  .match-chip:focus-visible{outline:var(--focus-ring);outline-offset:2px;}
+  .pair-tag{font-size:.75rem;background:var(--pazapa-green);color:#3a4a06;border-radius:6px;padding:1px 6px;margin-left:6px;}
+  fieldset{border:none;padding:0;margin:0 0 14px 0;}
+  legend{font-weight:700;padding:0;margin-bottom:8px;font-size:1rem;}
+  .stage-title{
+    display:flex;align-items:center;gap:8px;
+    margin-top:22px;margin-bottom:6px;
+  }
+  .stage-num{
+    background:var(--pazapa-blue-dark);color:#fff;
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.85rem;font-weight:800;flex:0 0 auto;
+  }
+  .screen-feedback{
+    margin-top:16px;padding:12px 14px;border-radius:10px;
+    background:#FFF7E3;border:1px solid #FCE7AE;
+    display:none;
+  }
+  .screen-feedback.show{display:block;}
+  /* Screen 6 */
+  .completion-icon{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--pazapa-green);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 14px;
+  }
+  .completion-icon svg{width:34px;height:34px;}
+  .center{text-align:center;}
+  .sr-only{
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+  }
+  footer.legal{
+    max-width:760px;margin:0 auto;padding:8px 16px 24px;
+    font-size:.75rem;color:#8a8a88;
+  }
+  @media (max-width:420px){
+    .msg{max-width:92%;}
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brandrow">
+    <span class="brandname">Pazapa English Programme for Adults</span>
+    <span class="lesson-tag">Week 6 · Day 3 · Explaining preferences and problems</span>
+  </div>
+</header>
+<div class="progress-track" aria-hidden="true">
+  <span class="progress-seg current" data-seg="1"></span>
+  <span class="progress-seg" data-seg="2"></span>
+  <span class="progress-seg" data-seg="3"></span>
+  <span class="progress-seg" data-seg="4"></span>
+  <span class="progress-seg" data-seg="5"></span>
+  <span class="progress-seg" data-seg="6"></span>
+</div>
+
+<main class="wrap">
+
+  <div id="live-region" class="sr-only" role="status" aria-live="polite"></div>
+
+  <!-- SCREEN 1 -->
+  <section id="screen1" class="screen active" aria-labelledby="s1-heading">
+    <div class="card">
+      <span class="eyebrow">Build Useful English</span>
+      <h1 id="s1-heading" tabindex="-1">Explaining preferences and problems</h1>
+      <div class="goal-box">
+        <strong>Today's task:</strong> Practise useful English for food preferences, allergies and problems with an order.
+      </div>
+      <h2>Useful English for this situation</h2>
+      <p>Look at these notes from the staff board. One part of each sentence can change.</p>
+
+      <div class="notice-grid">
+        <div class="notice-card">
+          <span class="sentence">Does this contain <span class="chip">nuts</span>?</span>
+          <span class="pattern-note">Use this to ask about an ingredient safely.</span>
+        </div>
+        <div class="notice-card">
+          <span class="sentence">Is this <span class="chip">spicy</span>?</span>
+          <span class="pattern-note">Change the word to ask about other things.</span>
+        </div>
+        <div class="notice-card">
+          <span class="sentence">I'd like it without <span class="chip">onions</span>.</span>
+          <span class="pattern-note">Change the word to say what you don't want.</span>
+        </div>
+        <div class="notice-card">
+          <span class="sentence">Could I have <span class="chip">something else</span>?</span>
+          <span class="pattern-note">Use this to politely ask for a change.</span>
+        </div>
+        <div class="notice-card">
+          <span class="sentence">I ordered <span class="chip">chicken</span>, not fish.</span>
+          <span class="pattern-note">Use this to correct a wrong order.</span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn" id="s1-continue">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCREEN 2 -->
+  <section id="screen2" class="screen" aria-labelledby="s2-heading">
+    <div class="card">
+      <span class="eyebrow">Step 2 of 5</span>
+      <h2 id="s2-heading" tabindex="-1">Build the sentences</h2>
+      <p>Tap the word groups in the right order. Tap a placed word group to send it back.</p>
+
+      <div id="s2-items"></div>
+
+      <div class="btn-row">
+        <button type="button" class="btn" id="s2-check">Check</button>
+        <button type="button" class="btn secondary" id="s2-reset">Try again</button>
+        <button type="button" class="btn" id="s2-continue" disabled>Continue</button>
+      </div>
+      <div class="screen-feedback" id="s2-feedback" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- SCREEN 3 -->
+  <section id="screen3" class="screen" aria-labelledby="s3-heading">
+    <div class="card">
+      <span class="eyebrow">Step 3 of 5</span>
+      <h2 id="s3-heading" tabindex="-1">Fill in the staff memo</h2>
+      <p>Fill each gap on the memo. Tap a word from the word ring below, or type your answer.</p>
+
+      <div class="memo-intro"><span class="pin-icon" aria-hidden="true">!</span> Staff notice: complete these lines before your shift.</div>
+      <div class="wordbank" id="s3-wordbank"></div>
+      <div id="s3-items"></div>
+
+      <div class="btn-row">
+        <button type="button" class="btn" id="s3-check">Check</button>
+        <button type="button" class="btn secondary" id="s3-reset">Try again</button>
+        <button type="button" class="btn" id="s3-continue" disabled>Continue</button>
+      </div>
+      <div class="screen-feedback" id="s3-feedback" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- SCREEN 4 -->
+  <section id="screen4" class="screen" aria-labelledby="s4-heading">
+    <div class="card">
+      <span class="eyebrow">Step 4 of 5</span>
+      <h2 id="s4-heading" tabindex="-1">Reference cards: what do you say?</h2>
+      <p>Flip through these three situation cards. Choose the most useful reply for each.</p>
+
+      <div id="s4-items"></div>
+
+      <div class="btn-row">
+        <button type="button" class="btn" id="s4-check">Check</button>
+        <button type="button" class="btn secondary" id="s4-reset">Try again</button>
+        <button type="button" class="btn" id="s4-continue" disabled>Continue</button>
+      </div>
+      <div class="screen-feedback" id="s4-feedback" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- SCREEN 5 -->
+  <section id="screen5" class="screen" aria-labelledby="s5-heading">
+    <div class="card">
+      <span class="eyebrow">Step 5 of 5 · Dialogue Lab</span>
+      <h2 id="s5-heading" tabindex="-1">A conversation at the table</h2>
+      <p>A customer is talking to a server about their order. Help complete the conversation.</p>
+
+      <div class="stage-title"><span class="stage-num">1</span><h3>Complete the exchange</h3></div>
+      <div id="s5a" class="thread"></div>
+
+      <div class="stage-title"><span class="stage-num">2</span><h3>Match the question to the reply</h3></div>
+      <p id="s5b-instructions">Tap a question, then tap the reply that matches it.</p>
+      <div class="match-panels" id="s5b"></div>
+
+      <div class="stage-title"><span class="stage-num">3</span><h3>Repair the conversation</h3></div>
+      <p>One line does not make sense. Choose the correct line.</p>
+      <div id="s5c" class="thread"></div>
+
+      <div class="btn-row">
+        <button type="button" class="btn" id="s5-check">Check</button>
+        <button type="button" class="btn secondary" id="s5-reset">Try again</button>
+        <button type="button" class="btn" id="s5-continue" disabled>Continue</button>
+      </div>
+      <div class="screen-feedback" id="s5-feedback" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- SCREEN 6 -->
+  <section id="screen6" class="screen" aria-labelledby="s6-heading">
+    <div class="card center">
+      <div class="completion-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2E2E2D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <h2 id="s6-heading" tabindex="-1">You built useful English.</h2>
+      <p>You practised language for explaining preferences and problems.</p>
+      <p>Next, you will read English for real life.</p>
+      <div class="btn-row" style="justify-content:center;">
+        <button type="button" class="btn secondary" id="tryagain-btn">Try again</button>
+        <button type="button" class="btn" id="done-btn">Done</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="legal">Pazapa English Programme for Adults · Week 6, Day 3 · Build Useful English</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONFIG — optional Moodle / SCORM linkage values
+     ============================================================ */
+  var CONFIG = {
+    moodleOrigin: null,
+    nextActivityUrl: null,
+    logoUrl: null,
+    feedbackEndpoint: null,
+    activityId: "A1_W06D3_STEP4_BUILD_USEFUL_ENGLISH",
+    completionLogLabel: "W06D3 Build Useful English completed"
+  };
+
+  /* ============================================================
+     NORMALISATION HELPERS FOR TYPED ANSWERS
+     ============================================================ */
+  function normalise(str){
+    if (typeof str !== "string") return "";
+    return str
+      .normalize("NFKC")
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[’‘]/g, "'")
+      .replace(/[“”]/g, '"')
+      .replace(/[.!?,;:]+$/g, "")
+      .toLowerCase();
+  }
+  function normaliseSentence(str){
+    return normalise(str);
+  }
+
+  /* ============================================================
+     CENTRAL ANSWER DATA
+     ============================================================ */
+  var DATA = {
+    s2: {
+      items: [
+        { chunks: ["Does", "this", "contain", "nuts?"], correct: "does this contain nuts" },
+        { chunks: ["I'd like", "it", "without", "onions."], correct: "i'd like it without onions" },
+        { chunks: ["Could you", "check", "the ingredients?"], correct: "could you check the ingredients" },
+        { chunks: ["I ordered", "chicken,", "not fish."], correct: "i ordered chicken, not fish" }
+      ]
+    },
+    s3: {
+      items: [
+        { before: "Is this", gapWord: "spicy", after: "?", accepted: ["spicy"], clue: "Ask how hot the food is." },
+        { before: "Could I have something", gapWord: "else", after: "?", accepted: ["else"], clue: "Ask for a different dish." },
+        { before: "I ordered chicken, not", gapWord: "fish", after: ".", accepted: ["fish"], clue: "The correct order was chicken." },
+        { before: "Does this contain", gapWord: "nuts", after: "?", accepted: ["nuts"], clue: "Ask about a possible allergy." }
+      ]
+    },
+    s4: {
+      items: [
+        {
+          prompt: "The server asks: \u201cIs everything okay with your order?\u201d You got fish, but you ordered chicken.",
+          options: [
+            "I ordered chicken, not fish.",
+            "The weather is nice today.",
+            "I like tea in the morning."
+          ],
+          correctIndex: 0,
+          explain: "This tells the server exactly what is wrong."
+        },
+        {
+          prompt: "You might be allergic to nuts, and you want to check a dish before you order.",
+          options: [
+            "Could I have the bill, please?",
+            "Does this contain nuts?",
+            "I ordered chicken, not fish."
+          ],
+          correctIndex: 1,
+          explain: "This directly asks about the ingredient you are worried about."
+        },
+        {
+          prompt: "The server offers you a curry. You don't like spicy food and want to check first.",
+          options: [
+            "I'd like it without onions.",
+            "Could you check the ingredients?",
+            "Is this spicy?"
+          ],
+          correctIndex: 2,
+          explain: "This asks directly about the thing you want to know."
+        }
+      ]
+    },
+    s5: {
+      a: [
+        {
+          speaker: "Customer",
+          lead: "Does this contain nuts?",
+          replySpeaker: "Server",
+          replyLead: "Let me check",
+          choices: ["the ingredients", "the weather"],
+          correct: "the ingredients"
+        },
+        {
+          speaker: "Customer",
+          lead: "I ordered chicken, not fish.",
+          replySpeaker: "Server",
+          replyLead: "I'm sorry. I will bring",
+          choices: ["something else", "the wrong order again"],
+          correct: "something else"
+        }
+      ],
+      b: {
+        questions: [
+          "Is this spicy?",
+          "Does this contain nuts?",
+          "Could I have something else?"
+        ],
+        responses: [
+          "No, it is mild.",
+          "Let me check the ingredients.",
+          "Yes, of course."
+        ],
+        // index in questions -> index in responses (correct pairing)
+        correctPairs: { 0: 0, 1: 1, 2: 2 }
+      },
+      c: {
+        speakerBefore: "Server",
+        lineBefore: "Is everything okay with your order?",
+        speakerBroken: "Customer",
+        brokenLine: "Fish ordered chicken I not.",
+        speakerAfter: "Server",
+        lineAfter: "I'm sorry. I will fix that right away.",
+        choices: [
+          "I ordered chicken, not fish.",
+          "Not fish chicken ordered I."
+        ],
+        correct: "I ordered chicken, not fish."
+      }
+    }
+  };
+
+  /* ============================================================
+     STATE
+     ============================================================ */
+  var STATE = {
+    screen: 1,
+    s2: { built: [[], [], [], []], correct: [false, false, false, false], attempts: [0, 0, 0, 0], revealed: [false, false, false, false] },
+    s3: { values: ["", "", "", ""], correct: [false, false, false, false], attempts: [0, 0, 0, 0], revealed: [false, false, false, false] },
+    s4: { chosen: [null, null, null], correct: [false, false, false], attempts: [0, 0, 0], revealed: [false, false, false] },
+    s5: {
+      a: { chosen: [null, null], correct: [false, false] },
+      b: { selectedQ: null, pairs: {}, correctFlags: [false, false, false] },
+      c: { chosen: null, correct: false },
+      attempts: 0,
+      revealed: false
+    },
+    validated: { s2: false, s3: false, s4: false, s5: false },
+    reachedScreen6: false
+  };
+
+  var STORAGE_KEY = "pazapa_" + CONFIG.activityId;
+
+  /* ============================================================
+     SCREEN NAVIGATION
+     ============================================================ */
+  function showScreen(n){
+    for (var i = 1; i <= 6; i++){
+      var sec = document.getElementById("screen" + i);
+      if (sec) sec.classList.toggle("active", i === n);
+    }
+    STATE.screen = n;
+    updateProgress(n);
+    var headingId = "s" + n + "-heading";
+    var heading = document.getElementById(headingId);
+    if (heading){
+      heading.setAttribute("tabindex", "-1");
+      heading.focus();
+    }
+    if (n === 6){
+      STATE.reachedScreen6 = true;
+      var doneBtn = document.getElementById("done-btn");
+      if (doneBtn) doneBtn.disabled = false;
+    }
+    saveProgress();
+  }
+
+  function updateProgress(n){
+    var segs = document.querySelectorAll(".progress-seg");
+    segs.forEach(function(seg){
+      var idx = parseInt(seg.getAttribute("data-seg"), 10);
+      seg.classList.remove("done", "current");
+      if (idx < n) seg.classList.add("done");
+      else if (idx === n) seg.classList.add("current");
+    });
+  }
+
+  function announce(msg){
+    var region = document.getElementById("live-region");
+    if (region){
+      region.textContent = "";
+      window.setTimeout(function(){ region.textContent = msg; }, 30);
+    }
+  }
+
+  /* ============================================================
+     SCREEN 1
+     ============================================================ */
+  document.getElementById("s1-continue").addEventListener("click", function(){
+    showScreen(2);
+  });
+
+  /* ============================================================
+     SCREEN 2 — Build the sentences (tap-to-order chunks)
+     ============================================================ */
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function renderS2(){
+    var container = document.getElementById("s2-items");
+    container.innerHTML = "";
+    DATA.s2.items.forEach(function(item, idx){
+      var block = document.createElement("div");
+      block.className = "ticket";
+
+      var label = document.createElement("span");
+      label.className = "ticket-num";
+      label.textContent = "Order slip #" + (idx + 1);
+      block.appendChild(label);
+
+      var built = document.createElement("div");
+      built.className = "built-row";
+      built.id = "s2-built-" + idx;
+      built.setAttribute("aria-label", "Your sentence, order slip " + (idx + 1));
+      block.appendChild(built);
+
+      var bank = document.createElement("div");
+      bank.className = "chunkbank";
+      bank.id = "s2-bank-" + idx;
+      block.appendChild(bank);
+
+      var status = document.createElement("div");
+      status.className = "status-line";
+      status.id = "s2-status-" + idx;
+      block.appendChild(status);
+
+      var showMeBtn = document.createElement("button");
+      showMeBtn.type = "button";
+      showMeBtn.className = "btn help";
+      showMeBtn.textContent = "Show me";
+      showMeBtn.style.display = "none";
+      showMeBtn.style.marginTop = "6px";
+      showMeBtn.id = "s2-showme-" + idx;
+      showMeBtn.addEventListener("click", function(){ revealS2(idx); });
+      block.appendChild(showMeBtn);
+
+      container.appendChild(block);
+
+      if (!STATE.s2._order) STATE.s2._order = [];
+      STATE.s2._order[idx] = shuffle(item.chunks.map(function(c, ci){ return { text: c, ci: ci }; }));
+
+      renderS2Item(idx);
+    });
+  }
+
+  function renderS2Item(idx){
+    var bank = document.getElementById("s2-bank-" + idx);
+    var built = document.getElementById("s2-built-" + idx);
+    bank.innerHTML = "";
+    built.innerHTML = "";
+    var builtChunks = STATE.s2.built[idx];
+
+    STATE.s2._order[idx].forEach(function(chunkObj){
+      var placedCount = builtChunks.filter(function(b){ return b.ci === chunkObj.ci; }).length;
+      if (placedCount > 0) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chunk-btn";
+      btn.textContent = chunkObj.text;
+      btn.disabled = STATE.s2.revealed[idx];
+      btn.addEventListener("click", function(){
+        STATE.s2.built[idx].push(chunkObj);
+        renderS2Item(idx);
+      });
+      bank.appendChild(btn);
+    });
+
+    if (builtChunks.length === 0){
+      var placeholder = document.createElement("span");
+      placeholder.style.color = "#8a8a88";
+      placeholder.style.fontStyle = "italic";
+      placeholder.textContent = "Tap word groups below to build the sentence.";
+      built.appendChild(placeholder);
+    } else {
+      builtChunks.forEach(function(chunkObj, posIdx){
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "chunk-btn placed";
+        btn.textContent = chunkObj.text;
+        btn.setAttribute("aria-label", chunkObj.text + ", position " + (posIdx + 1) + " of " + builtChunks.length + ". Activate to remove.");
+        btn.disabled = STATE.s2.revealed[idx];
+        btn.addEventListener("click", function(){
+          STATE.s2.built[idx].splice(posIdx, 1);
+          renderS2Item(idx);
+        });
+        built.appendChild(btn);
+      });
+    }
+  }
+
+  function checkS2(){
+    var allBuilt = DATA.s2.items.every(function(item, idx){
+      return STATE.s2.revealed[idx] || STATE.s2.built[idx].length === item.chunks.length;
+    });
+    var fb = document.getElementById("s2-feedback");
+    if (!allBuilt){
+      fb.className = "screen-feedback show";
+      fb.textContent = "Build all four sentences using every word group, then press Check.";
+      announce("Please build all four sentences first.");
+      return;
+    }
+    DATA.s2.items.forEach(function(item, idx){
+      if (STATE.s2.revealed[idx]) return;
+      var builtText = STATE.s2.built[idx].map(function(c){ return c.text; }).join(" ");
+      var ok = normaliseSentence(builtText) === normaliseSentence(item.correct);
+      STATE.s2.correct[idx] = ok;
+      if (!ok){
+        STATE.s2.attempts[idx]++;
+      }
+      renderS2Status(idx);
+    });
+    var allCorrectOrRevealed = STATE.s2.correct.every(function(c, i){ return c || STATE.s2.revealed[i]; });
+    STATE.validated.s2 = allCorrectOrRevealed;
+    document.getElementById("s2-continue").disabled = !allCorrectOrRevealed;
+    if (allCorrectOrRevealed){
+      fb.className = "screen-feedback show";
+      fb.textContent = "Well done. All four sentences are correct. You can continue.";
+      announce("All sentences correct. You can continue.");
+    } else {
+      fb.className = "screen-feedback show";
+      fb.textContent = "Try again. Check the item marked in yellow, then press Check again.";
+      announce("Some sentences need another try.");
+    }
+  }
+
+  function renderS2Status(idx){
+    var status = document.getElementById("s2-status-" + idx);
+    var built = document.getElementById("s2-built-" + idx);
+    var showMeBtn = document.getElementById("s2-showme-" + idx);
+    built.classList.remove("valid", "invalid");
+    if (STATE.s2.revealed[idx]){
+      status.innerHTML = '<span class="status-dot ok"></span><span class="status-text ok">Shown for you.</span>';
+      built.classList.add("valid");
+      showMeBtn.style.display = "none";
+      return;
+    }
+    if (STATE.s2.correct[idx]){
+      status.innerHTML = '<span class="status-dot ok"></span><span class="status-text ok">Correct.</span>';
+      built.classList.add("valid");
+      showMeBtn.style.display = "none";
+    } else if (STATE.s2.attempts[idx] > 0){
+      status.innerHTML = '<span class="status-dot warn"></span><span class="status-text warn">Try again. Check the word order.</span>';
+      built.classList.add("invalid");
+      if (STATE.s2.attempts[idx] >= 2){
+        showMeBtn.style.display = "inline-block";
+      }
+    } else {
+      status.innerHTML = "";
+    }
+  }
+
+  function revealS2(idx){
+    STATE.s2.built[idx] = DATA.s2.items[idx].chunks.map(function(c, ci){ return { text: c, ci: ci }; });
+    STATE.s2.revealed[idx] = true;
+    STATE.s2.correct[idx] = true;
+    renderS2Item(idx);
+    renderS2Status(idx);
+    checkS2();
+  }
+
+  document.getElementById("s2-check").addEventListener("click", checkS2);
+  document.getElementById("s2-reset").addEventListener("click", function(){
+    STATE.s2.built = [[], [], [], []];
+    STATE.s2.correct = [false, false, false, false];
+    STATE.s2.attempts = [0, 0, 0, 0];
+    STATE.s2.revealed = [false, false, false, false];
+    STATE.validated.s2 = false;
+    document.getElementById("s2-continue").disabled = true;
+    document.getElementById("s2-feedback").className = "screen-feedback";
+    renderS2();
+    announce("This step has been reset.");
+  });
+  document.getElementById("s2-continue").addEventListener("click", function(){
+    if (!STATE.validated.s2) return;
+    showScreen(3);
+  });
+
+  /* ============================================================
+     SCREEN 3 — Complete the useful English (gap fill)
+     ============================================================ */
+  function renderS3(){
+    var wb = document.getElementById("s3-wordbank");
+    var items = document.getElementById("s3-items");
+    wb.innerHTML = "";
+    items.innerHTML = "";
+
+    var words = shuffle(DATA.s3.items.map(function(it, idx){ return { word: it.gapWord, idx: idx }; }));
+    words.forEach(function(w){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chunk-btn";
+      btn.textContent = w.word;
+      btn.id = "s3-word-" + w.idx;
+      btn.addEventListener("click", function(){
+        var firstEmpty = STATE.s3.values.findIndex(function(v){ return v === ""; });
+        if (firstEmpty === -1) return;
+        STATE.s3.values[firstEmpty] = w.word;
+        document.getElementById("s3-input-" + firstEmpty).value = w.word;
+        refreshWordbank();
+      });
+      wb.appendChild(btn);
+    });
+
+    DATA.s3.items.forEach(function(item, idx){
+      var row = document.createElement("div");
+      row.className = "gap-item";
+
+      var num = document.createElement("span");
+      num.className = "gap-num";
+      num.setAttribute("aria-hidden", "true");
+      num.textContent = String(idx + 1);
+      row.appendChild(num);
+
+      var body = document.createElement("div");
+      body.style.flex = "1";
+
+      var sentence = document.createElement("div");
+      sentence.className = "gap-sentence";
+      var label = document.createElement("label");
+      label.setAttribute("for", "s3-input-" + idx);
+      label.innerHTML = item.before + " ";
+      var input = document.createElement("input");
+      input.type = "text";
+      input.className = "gap-input";
+      input.id = "s3-input-" + idx;
+      input.setAttribute("aria-label", "Gap " + (idx + 1) + ": " + item.before + " ___ " + item.after);
+      input.value = STATE.s3.values[idx];
+      input.addEventListener("input", function(){
+        STATE.s3.values[idx] = input.value;
+        refreshWordbank();
+      });
+      sentence.appendChild(label);
+      sentence.appendChild(input);
+      var afterSpan = document.createElement("span");
+      afterSpan.textContent = " " + item.after;
+      sentence.appendChild(afterSpan);
+      body.appendChild(sentence);
+
+      var clue = document.createElement("div");
+      clue.className = "gap-clue";
+      clue.textContent = item.clue;
+      body.appendChild(clue);
+
+      var status = document.createElement("div");
+      status.className = "status-line";
+      status.id = "s3-status-" + idx;
+      body.appendChild(status);
+
+      var showMeBtn = document.createElement("button");
+      showMeBtn.type = "button";
+      showMeBtn.className = "btn help";
+      showMeBtn.textContent = "Show me";
+      showMeBtn.style.display = "none";
+      showMeBtn.style.marginTop = "6px";
+      showMeBtn.id = "s3-showme-" + idx;
+      showMeBtn.addEventListener("click", function(){ revealS3(idx); });
+      body.appendChild(showMeBtn);
+
+      row.appendChild(body);
+      items.appendChild(row);
+    });
+    refreshWordbank();
+  }
+
+  function refreshWordbank(){
+    DATA.s3.items.forEach(function(item, idx){
+      var btn = document.getElementById("s3-word-" + idx);
+      if (!btn) return;
+      var used = STATE.s3.values.some(function(v){ return normalise(v) === normalise(item.gapWord); });
+      btn.disabled = used;
+    });
+  }
+
+  function checkS3(){
+    var allFilled = DATA.s3.items.every(function(item, idx){
+      return STATE.s3.revealed[idx] || normalise(STATE.s3.values[idx]) !== "";
+    });
+    var fb = document.getElementById("s3-feedback");
+    if (!allFilled){
+      fb.className = "screen-feedback show";
+      fb.textContent = "Fill in every gap, then press Check.";
+      announce("Please fill in every gap first.");
+      return;
+    }
+    DATA.s3.items.forEach(function(item, idx){
+      if (STATE.s3.revealed[idx]) return;
+      var val = normalise(STATE.s3.values[idx]);
+      var ok = item.accepted.some(function(a){ return normalise(a) === val; }) && val !== "";
+      STATE.s3.correct[idx] = ok;
+      if (!ok) STATE.s3.attempts[idx]++;
+      renderS3Status(idx);
+    });
+    var allCorrectOrRevealed = STATE.s3.correct.every(function(c, i){ return c || STATE.s3.revealed[i]; });
+    STATE.validated.s3 = allCorrectOrRevealed;
+    document.getElementById("s3-continue").disabled = !allCorrectOrRevealed;
+    fb.className = "screen-feedback show";
+    if (allCorrectOrRevealed){
+      fb.textContent = "Well done. All four gaps are correct. You can continue.";
+      announce("All gaps correct. You can continue.");
+    } else {
+      fb.textContent = "Try again. Look at the gap marked in yellow.";
+      announce("Some gaps need another try.");
+    }
+  }
+
+  function renderS3Status(idx){
+    var status = document.getElementById("s3-status-" + idx);
+    var input = document.getElementById("s3-input-" + idx);
+    var showMeBtn = document.getElementById("s3-showme-" + idx);
+    input.style.borderColor = "#b9c4c3";
+    if (STATE.s3.revealed[idx]){
+      status.innerHTML = '<span class="status-dot ok"></span><span class="status-text ok">Shown for you.</span>';
+      showMeBtn.style.display = "none";
+      return;
+    }
+    if (STATE.s3.correct[idx]){
+      status.innerHTML = '<span class="status-dot ok"></span><span class="status-text ok">Correct.</span>';
+      input.style.borderColor = "#8fae2a";
+      showMeBtn.style.display = "none";
+    } else if (STATE.s3.attempts[idx] > 0){
+      status.innerHTML = '<span class="status-dot warn"></span><span class="status-text warn">Try again. Check the word.</span>';
+      input.style.borderColor = "var(--pazapa-yellow)";
+      if (STATE.s3.attempts[idx] >= 2){
+        showMeBtn.style.display = "inline-block";
+      }
+    }
+  }
+
+  function revealS3(idx){
+    STATE.s3.values[idx] = DATA.s3.items[idx].gapWord;
+    document.getElementById("s3-input-" + idx).value = DATA.s3.items[idx].gapWord;
+    STATE.s3.revealed[idx] = true;
+    STATE.s3.correct[idx] = true;
+    refreshWordbank();
+    renderS3Status(idx);
+    checkS3();
+  }
+
+  document.getElementById("s3-check").addEventListener("click", checkS3);
+  document.getElementById("s3-reset").addEventListener("click", function(){
+    STATE.s3.values = ["", "", "", ""];
+    STATE.s3.correct = [false, false, false, false];
+    STATE.s3.attempts = [0, 0, 0, 0];
+    STATE.s3.revealed = [false, false, false, false];
+    STATE.validated.s3 = false;
+    document.getElementById("s3-continue").disabled = true;
+    document.getElementById("s3-feedback").className = "screen-feedback";
+    renderS3();
+    announce("This step has been reset.");
+  });
+  document.getElementById("s3-continue").addEventListener("click", function(){
+    if (!STATE.validated.s3) return;
+    showScreen(4);
+  });
+
+  /* ============================================================
+     SCREEN 4 — Choose the best response (message interface)
+     ============================================================ */
+  function renderS4(){
+    var container = document.getElementById("s4-items");
+    container.innerHTML = "";
+    STATE.s4._order = STATE.s4._order || [];
+    DATA.s4.items.forEach(function(item, idx){
+      var card = document.createElement("div");
+      card.className = "ref-card";
+      card.id = "s4-card-" + idx;
+
+      var head = document.createElement("div");
+      head.className = "ref-card-head";
+      var num = document.createElement("span");
+      num.className = "ref-num";
+      num.setAttribute("aria-hidden", "true");
+      num.textContent = String(idx + 1);
+      head.appendChild(num);
+      var promptEl = document.createElement("div");
+      promptEl.className = "ref-prompt";
+      promptEl.textContent = item.prompt;
+      head.appendChild(promptEl);
+      card.appendChild(head);
+
+      var fieldset = document.createElement("fieldset");
+      fieldset.id = "s4-options-" + idx;
+      var legend = document.createElement("legend");
+      legend.className = "sr-only";
+      legend.textContent = "Choose the best reply for situation " + (idx + 1);
+      fieldset.appendChild(legend);
+      var pillRow = document.createElement("div");
+      pillRow.className = "pill-row";
+      pillRow.id = "s4-pillrow-" + idx;
+      fieldset.appendChild(pillRow);
+      card.appendChild(fieldset);
+
+      var explain = document.createElement("div");
+      explain.className = "reply-explain";
+      explain.id = "s4-explain-" + idx;
+      card.appendChild(explain);
+
+      var status = document.createElement("div");
+      status.className = "status-line";
+      status.id = "s4-status-" + idx;
+      card.appendChild(status);
+
+      var showMeBtn = document.createElement("button");
+      showMeBtn.type = "button";
+      showMeBtn.className = "btn help";
+      showMeBtn.textContent = "Show me";
+      showMeBtn.style.display = "none";
+      showMeBtn.style.marginTop = "6px";
+      showMeBtn.id = "s4-showme-" + idx;
+      showMeBtn.addEventListener("click", function(){ revealS4(idx); });
+      card.appendChild(showMeBtn);
+
+      container.appendChild(card);
+
+      STATE.s4._order[idx] = shuffle(item.options.map(function(o, oi){ return { text: o, oi: oi }; }));
+      renderS4Item(idx);
+    });
+  }
+
+  function renderS4Item(idx){
+    var item = DATA.s4.items[idx];
+    var pillRow = document.getElementById("s4-pillrow-" + idx);
+    pillRow.innerHTML = "";
+
+    STATE.s4._order[idx].forEach(function(opt){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pill-option";
+      btn.textContent = opt.text;
+      btn.disabled = !!STATE.s4.revealed[idx];
+      btn.setAttribute("aria-pressed", STATE.s4.chosen[idx] === opt.oi ? "true" : "false");
+      btn.id = "s4-opt-" + idx + "-" + opt.oi;
+      btn.addEventListener("click", function(){
+        if (STATE.s4.revealed[idx]) return;
+        STATE.s4.chosen[idx] = opt.oi;
+        item.options.forEach(function(o2, oi2){
+          var b2 = document.getElementById("s4-opt-" + idx + "-" + oi2);
+          if (b2) b2.setAttribute("aria-pressed", oi2 === opt.oi ? "true" : "false");
+        });
+      });
+      pillRow.appendChild(btn);
+    });
+  }
+
+  function checkS4(){
+    var allAnswered = STATE.s4.chosen.every(function(c){ return c !== null; });
+    var fb = document.getElementById("s4-feedback");
+    if (!allAnswered){
+      fb.className = "screen-feedback show";
+      fb.textContent = "Choose a reply for every situation, then press Check.";
+      announce("Please choose a reply for every situation.");
+      return;
+    }
+    DATA.s4.items.forEach(function(item, idx){
+      if (STATE.s4.revealed[idx]) return;
+      var ok = STATE.s4.chosen[idx] === item.correctIndex;
+      var wasWrong = !ok;
+      STATE.s4.correct[idx] = ok;
+      if (wasWrong){
+        STATE.s4.attempts[idx]++;
+        STATE.s4._order[idx] = shuffle(item.options.map(function(o, oi){ return { text: o, oi: oi }; }));
+        renderS4Item(idx);
+      }
+      renderS4Status(idx);
+    });
+    var allCorrectOrRevealed = STATE.s4.correct.every(function(c, i){ return c || STATE.s4.revealed[i]; });
+    STATE.validated.s4 = allCorrectOrRevealed;
+    document.getElementById("s4-continue").disabled = !allCorrectOrRevealed;
+    fb.className = "screen-feedback show";
+    if (allCorrectOrRevealed){
+      fb.textContent = "Well done. You chose the most useful reply each time.";
+      announce("All replies correct. You can continue.");
+    } else {
+      fb.textContent = "Try again. Read the situation marked in yellow again.";
+      announce("Some replies need another try.");
+    }
+  }
+
+  function renderS4Status(idx){
+    var status = document.getElementById("s4-status-" + idx);
+    var explain = document.getElementById("s4-explain-" + idx);
+    var showMeBtn = document.getElementById("s4-showme-" + idx);
+    var item = DATA.s4.items[idx];
+    if (STATE.s4.revealed[idx]){
+      status.innerHTML = '<span class="status-dot ok"></span><span class="status-text ok">Shown for you.</span>';
+      explain.textContent = item.explain;
+      explain.className = "reply-explain show";
+      showMeBtn.style.display = "none";
+      return;
+    }
+    if (STATE.s4.correct[idx]){
+      status.innerHTML = '<span class="status-dot ok"></span><span class="status-text ok">Correct.</span>';
+      explain.textContent = item.explain;
+      explain.className = "reply-explain show";
+      showMeBtn.style.display = "none";
+    } else if (STATE.s4.chosen[idx] !== null){
+      status.innerHTML = '<span class="status-dot warn"></span><span class="status-text warn">Try again. Which reply answers best?</span>';
+      explain.className = "reply-explain";
+      if (STATE.s4.attempts[idx] >= 2){
+        showMeBtn.style.display = "inline-block";
+      }
+    }
+  }
+
+  function revealS4(idx){
+    var item = DATA.s4.items[idx];
+    STATE.s4.chosen[idx] = item.correctIndex;
+    STATE.s4.revealed[idx] = true;
+    STATE.s4.correct[idx] = true;
+    item.options.forEach(function(o2, oi2){
+      var b2 = document.getElementById("s4-opt-" + idx + "-" + oi2);
+      if (b2){
+        b2.setAttribute("aria-pressed", oi2 === item.correctIndex ? "true" : "false");
+        b2.disabled = true;
+      }
+    });
+    renderS4Status(idx);
+    checkS4();
+  }
+
+  document.getElementById("s4-check").addEventListener("click", checkS4);
+  document.getElementById("s4-reset").addEventListener("click", function(){
+    STATE.s4.chosen = [null, null, null];
+    STATE.s4.correct = [false, false, false];
+    STATE.s4.attempts = [0, 0, 0];
+    STATE.s4.revealed = [false, false, false];
+    STATE.validated.s4 = false;
+    document.getElementById("s4-continue").disabled = true;
+    document.getElementById("s4-feedback").className = "screen-feedback";
+    renderS4();
+    announce("This step has been reset.");
+  });
+  document.getElementById("s4-continue").addEventListener("click", function(){
+    if (!STATE.validated.s4) return;
+    showScreen(5);
+  });
+
+  /* ============================================================
+     SCREEN 5 — Dialogue Lab (exchange + match + repair)
+     ============================================================ */
+  function roleOf(speaker){
+    return /server/i.test(speaker) ? "server" : "customer";
+  }
+
+  function renderS5(){
+    // Part A — complete the exchange
+    var aWrap = document.getElementById("s5a");
+    aWrap.innerHTML = "";
+    DATA.s5.a.forEach(function(item, idx){
+      var leadRole = roleOf(item.speaker);
+      var row1 = document.createElement("div");
+      row1.className = "msg-row " + leadRole;
+      row1.innerHTML = '<span class="msg"><span class="msg-speaker">' + item.speaker + '</span>' + item.lead + '</span>';
+      aWrap.appendChild(row1);
+
+      var replyRole = roleOf(item.replySpeaker);
+      var row2 = document.createElement("div");
+      row2.className = "msg-row " + replyRole;
+      row2.innerHTML = '<span class="msg"><span class="msg-speaker">' + item.replySpeaker + '</span>' + item.replyLead + ' \u2026</span>';
+      aWrap.appendChild(row2);
+
+      var choices = document.createElement("div");
+      choices.className = "choice-row " + replyRole;
+      var group = shuffle(item.choices.slice());
+      group.forEach(function(choiceText){
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "choice-btn";
+        btn.textContent = choiceText;
+        btn.setAttribute("aria-pressed", "false");
+        btn.id = "s5a-" + idx + "-" + item.choices.indexOf(choiceText);
+        btn.addEventListener("click", function(){
+          if (STATE.s5.revealed) return;
+          STATE.s5.a.chosen[idx] = choiceText;
+          item.choices.forEach(function(c2){
+            var b2 = document.getElementById("s5a-" + idx + "-" + item.choices.indexOf(c2));
+            if (b2) b2.setAttribute("aria-pressed", c2 === choiceText ? "true" : "false");
+          });
+        });
+        choices.appendChild(btn);
+      });
+      aWrap.appendChild(choices);
+    });
+
+    // Part B — match questions to responses
+    var bWrap = document.getElementById("s5b");
+    bWrap.innerHTML = "";
+    var qCol = document.createElement("div");
+    qCol.className = "match-col";
+    var qHeading = document.createElement("h4");
+    qHeading.textContent = "Questions";
+    qCol.appendChild(qHeading);
+    var qOrder = shuffle(DATA.s5.b.questions.map(function(q, qi){ return { text: q, qi: qi }; }));
+    qOrder.forEach(function(q){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "match-chip";
+      btn.textContent = q.text;
+      btn.id = "s5b-q-" + q.qi;
+      btn.setAttribute("aria-pressed", "false");
+      btn.addEventListener("click", function(){ selectMatchQuestion(q.qi); });
+      qCol.appendChild(btn);
+    });
+    bWrap.appendChild(qCol);
+
+    var rCol = document.createElement("div");
+    rCol.className = "match-col";
+    var rHeading = document.createElement("h4");
+    rHeading.textContent = "Replies";
+    rCol.appendChild(rHeading);
+    var rOrder = shuffle(DATA.s5.b.responses.map(function(r, ri){ return { text: r, ri: ri }; }));
+    rOrder.forEach(function(r){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "match-chip";
+      btn.textContent = r.text;
+      btn.id = "s5b-r-" + r.ri;
+      btn.addEventListener("click", function(){ selectMatchResponse(r.ri); });
+      rCol.appendChild(btn);
+    });
+    bWrap.appendChild(rCol);
+
+    // Part C — repair the dialogue
+    var cWrap = document.getElementById("s5c");
+    cWrap.innerHTML = "";
+    var d = DATA.s5.c;
+    var beforeRole = roleOf(d.speakerBefore);
+    var rowBefore = document.createElement("div");
+    rowBefore.className = "msg-row " + beforeRole;
+    rowBefore.innerHTML = '<span class="msg"><span class="msg-speaker">' + d.speakerBefore + '</span>' + d.lineBefore + '</span>';
+    cWrap.appendChild(rowBefore);
+
+    var brokenRole = roleOf(d.speakerBroken);
+    var rowBroken = document.createElement("div");
+    rowBroken.className = "msg-row " + brokenRole;
+    rowBroken.innerHTML = '<span class="msg broken"><span class="msg-speaker">' + d.speakerBroken + '</span>' + d.brokenLine + '</span>';
+    cWrap.appendChild(rowBroken);
+
+    var choicesC = document.createElement("div");
+    choicesC.className = "choice-row " + brokenRole;
+    var cOrder = shuffle(d.choices.slice());
+    cOrder.forEach(function(choiceText){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "choice-btn";
+      btn.textContent = choiceText;
+      btn.setAttribute("aria-pressed", "false");
+      btn.id = "s5c-" + d.choices.indexOf(choiceText);
+      btn.addEventListener("click", function(){
+        if (STATE.s5.revealed) return;
+        STATE.s5.c.chosen = choiceText;
+        d.choices.forEach(function(c2){
+          var b2 = document.getElementById("s5c-" + d.choices.indexOf(c2));
+          if (b2) b2.setAttribute("aria-pressed", c2 === choiceText ? "true" : "false");
+        });
+      });
+      choicesC.appendChild(btn);
+    });
+    cWrap.appendChild(choicesC);
+
+    var afterRole = roleOf(d.speakerAfter);
+    var rowAfter = document.createElement("div");
+    rowAfter.className = "msg-row " + afterRole;
+    rowAfter.style.marginTop = "2px";
+    rowAfter.innerHTML = '<span class="msg"><span class="msg-speaker">' + d.speakerAfter + '</span>' + d.lineAfter + '</span>';
+    cWrap.appendChild(rowAfter);
+  }
+
+  function selectMatchQuestion(qi){
+    if (STATE.s5.revealed) return;
+    STATE.s5.b.selectedQ = qi;
+    for (var i = 0; i < DATA.s5.b.questions.length; i++){
+      var b = document.getElementById("s5b-q-" + i);
+      if (b) b.setAttribute("aria-pressed", i === qi ? "true" : "false");
+    }
+  }
+
+  function selectMatchResponse(ri){
+    if (STATE.s5.revealed) return;
+    if (STATE.s5.b.selectedQ === null){
+      announce("Choose a question first, then choose its reply.");
+      return;
+    }
+    STATE.s5.b.pairs[STATE.s5.b.selectedQ] = ri;
+    var qBtn = document.getElementById("s5b-q-" + STATE.s5.b.selectedQ);
+    var rBtn = document.getElementById("s5b-r-" + ri);
+    if (qBtn){
+      qBtn.classList.add("paired");
+      qBtn.setAttribute("aria-pressed", "false");
+      var existingTag = qBtn.querySelector(".pair-tag");
+      if (existingTag) existingTag.remove();
+      var tag = document.createElement("span");
+      tag.className = "pair-tag";
+      tag.textContent = "paired";
+      qBtn.appendChild(tag);
+    }
+    document.querySelectorAll("#s5b .match-col:last-child .match-chip").forEach(function(el){
+      el.classList.remove("paired");
+    });
+    Object.keys(STATE.s5.b.pairs).forEach(function(qk){
+      var rk = STATE.s5.b.pairs[qk];
+      var rElem = document.getElementById("s5b-r-" + rk);
+      if (rElem) rElem.classList.add("paired");
+    });
+    STATE.s5.b.selectedQ = null;
+  }
+
+  function checkS5(){
+    var aAnswered = STATE.s5.a.chosen.every(function(c){ return c !== null; });
+    var bAnswered = Object.keys(STATE.s5.b.pairs).length === DATA.s5.b.questions.length;
+    var cAnswered = STATE.s5.c.chosen !== null;
+    if (!(aAnswered && bAnswered && cAnswered)){
+      var fbEarly = document.getElementById("s5-feedback");
+      fbEarly.className = "screen-feedback show";
+      fbEarly.textContent = "Complete all three parts of the conversation, then press Check.";
+      announce("Please complete all three parts first.");
+      return;
+    }
+
+    // Part A
+    var aOk = true;
+    DATA.s5.a.forEach(function(item, idx){
+      var ok = STATE.s5.a.chosen[idx] === item.correct;
+      STATE.s5.a.correct[idx] = ok;
+      if (!ok) aOk = false;
+    });
+
+    // Part B
+    var bOk = true;
+    DATA.s5.b.questions.forEach(function(q, qi){
+      var expected = DATA.s5.b.correctPairs[qi];
+      var got = STATE.s5.b.pairs[qi];
+      var ok = got === expected;
+      STATE.s5.b.correctFlags[qi] = ok;
+      if (!ok) bOk = false;
+    });
+
+    // Part C
+    var cOk = STATE.s5.c.chosen === DATA.s5.c.correct;
+    STATE.s5.c.correct = cOk;
+
+    var allOk = aOk && bOk && cOk;
+    if (!STATE.s5.revealed){
+      if (!allOk) STATE.s5.attempts++;
+    }
+    markS5Feedback(aOk, bOk, cOk, allOk);
+
+    STATE.validated.s5 = allOk || STATE.s5.revealed;
+    document.getElementById("s5-continue").disabled = !STATE.validated.s5;
+  }
+
+  function markS5Feedback(aOk, bOk, cOk, allOk){
+    var fb = document.getElementById("s5-feedback");
+    fb.className = "screen-feedback show";
+    if (STATE.s5.revealed){
+      fb.textContent = "Shown for you. You can continue.";
+      return;
+    }
+    if (allOk){
+      fb.textContent = "Well done. The whole conversation works. You can continue.";
+      announce("The conversation is complete and correct.");
+      return;
+    }
+    var parts = [];
+    if (!aOk) parts.push("Part 1 (complete the exchange)");
+    if (!bOk) parts.push("Part 2 (match)");
+    if (!cOk) parts.push("Part 3 (repair)");
+    var msg = "Try again. Look at: " + parts.join(", ") + ".";
+    if (STATE.s5.attempts >= 2){
+      msg += " You can press Show me for help.";
+      var showBtn = document.getElementById("s5-showme");
+      if (!showBtn){
+        showBtn = document.createElement("button");
+        showBtn.type = "button";
+        showBtn.id = "s5-showme";
+        showBtn.className = "btn help";
+        showBtn.textContent = "Show me";
+        showBtn.style.marginTop = "10px";
+        showBtn.addEventListener("click", revealS5);
+        fb.parentNode.insertBefore(showBtn, fb);
+      }
+    }
+    fb.textContent = msg;
+    announce("The conversation needs another try.");
+  }
+
+  function revealS5(){
+    STATE.s5.a.chosen[0] = DATA.s5.a[0].correct;
+    STATE.s5.a.chosen[1] = DATA.s5.a[1].correct;
+    DATA.s5.a.forEach(function(item, idx){
+      item.choices.forEach(function(c2){
+        var b2 = document.getElementById("s5a-" + idx + "-" + item.choices.indexOf(c2));
+        if (b2){
+          b2.setAttribute("aria-pressed", c2 === item.correct ? "true" : "false");
+          b2.disabled = true;
+        }
+      });
+    });
+
+    STATE.s5.b.pairs = { 0: 0, 1: 1, 2: 2 };
+    document.querySelectorAll("#s5b .match-chip").forEach(function(el){ el.disabled = true; });
+    document.querySelectorAll("#s5b .match-col:last-child .match-chip").forEach(function(el){ el.classList.remove("paired"); });
+    Object.keys(STATE.s5.b.pairs).forEach(function(qk){
+      var qElem = document.getElementById("s5b-q-" + qk);
+      var rElem = document.getElementById("s5b-r-" + STATE.s5.b.pairs[qk]);
+      if (qElem && !qElem.querySelector(".pair-tag")){
+        var tag = document.createElement("span");
+        tag.className = "pair-tag";
+        tag.textContent = "paired";
+        qElem.appendChild(tag);
+      }
+      if (qElem) qElem.classList.add("paired");
+      if (rElem) rElem.classList.add("paired");
+    });
+
+    STATE.s5.c.chosen = DATA.s5.c.correct;
+    DATA.s5.c.choices.forEach(function(c2){
+      var b2 = document.getElementById("s5c-" + DATA.s5.c.choices.indexOf(c2));
+      if (b2){
+        b2.setAttribute("aria-pressed", c2 === DATA.s5.c.correct ? "true" : "false");
+        b2.disabled = true;
+      }
+    });
+
+    STATE.s5.revealed = true;
+    var showBtn = document.getElementById("s5-showme");
+    if (showBtn) showBtn.style.display = "none";
+    checkS5();
+  }
+
+  document.getElementById("s5-check").addEventListener("click", checkS5);
+  document.getElementById("s5-reset").addEventListener("click", function(){
+    STATE.s5 = {
+      a: { chosen: [null, null], correct: [false, false] },
+      b: { selectedQ: null, pairs: {}, correctFlags: [false, false, false] },
+      c: { chosen: null, correct: false },
+      attempts: 0,
+      revealed: false
+    };
+    STATE.validated.s5 = false;
+    document.getElementById("s5-continue").disabled = true;
+    document.getElementById("s5-feedback").className = "screen-feedback";
+    var oldShowMe = document.getElementById("s5-showme");
+    if (oldShowMe) oldShowMe.remove();
+    renderS5();
+    announce("This step has been reset.");
+  });
+  document.getElementById("s5-continue").addEventListener("click", function(){
+    if (!STATE.validated.s5) return;
+    showScreen(6);
+  });
+
+  /* ============================================================
+     SCREEN 6 — Completion, SCORM/local persistence
+     ============================================================ */
+  var completionSent = false;
+  var scormAPI = null;
+  var scormVersion = null;
+
+  function findScormAPI(win, depth){
+    depth = depth || 0;
+    if (depth > 8 || !win) return null;
+    try {
+      if (win.API_1484_11) return { api: win.API_1484_11, version: "2004" };
+      if (win.API) return { api: win.API, version: "1.2" };
+    } catch (e) { /* cross-origin, ignore */ }
+    try {
+      if (win.parent && win.parent !== win) {
+        var found = findScormAPI(win.parent, depth + 1);
+        if (found) return found;
+      }
+    } catch (e) {}
+    try {
+      if (win.opener) {
+        var foundOpener = findScormAPI(win.opener, depth + 1);
+        if (foundOpener) return foundOpener;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function initScorm(){
+    try {
+      var found = findScormAPI(window, 0);
+      if (found){
+        scormAPI = found.api;
+        scormVersion = found.version;
+        if (scormVersion === "2004"){
+          scormAPI.Initialize("");
+        } else {
+          scormAPI.LMSInitialize("");
+        }
+      }
+    } catch (e) {
+      scormAPI = null;
+    }
+  }
+
+  function getScormStatus(){
+    if (!scormAPI) return null;
+    try {
+      if (scormVersion === "2004"){
+        return scormAPI.GetValue("cmi.completion_status");
+      } else {
+        return scormAPI.LMSGetValue("cmi.core.lesson_status");
+      }
+    } catch (e) { return null; }
+  }
+
+  function setScormStatus(status){
+    if (!scormAPI) return false;
+    try {
+      var current = getScormStatus();
+      var downgrade = (current === "completed" || current === "passed") &&
+                       (status !== "completed" && status !== "passed");
+      if (downgrade) return true;
+      if (scormVersion === "2004"){
+        scormAPI.SetValue("cmi.completion_status", status === "completed" ? "completed" : status);
+        scormAPI.Commit("");
+      } else {
+        scormAPI.LMSSetValue("cmi.core.lesson_status", status === "completed" ? "completed" : status);
+        scormAPI.LMSCommit("");
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function saveProgress(){
+    try {
+      var snapshot = {
+        v: 1,
+        screen: STATE.screen,
+        validated: STATE.validated,
+        reachedScreen6: STATE.reachedScreen6
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
+    } catch (e) { /* storage unavailable — continue without saving */ }
+  }
+
+  function loadProgress(){
+    try {
+      var raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  function activityCompleted(){
+    if (completionSent) return;
+    completionSent = true;
+    try { console.log(CONFIG.completionLogLabel); } catch (e) {}
+
+    if (scormAPI){
+      setScormStatus("completed");
+    }
+    try {
+      window.localStorage.setItem(STORAGE_KEY + "_complete", "1");
+    } catch (e) {}
+
+    var doneBtn = document.getElementById("done-btn");
+    if (doneBtn){
+      doneBtn.textContent = "Done";
+      doneBtn.disabled = true;
+    }
+  }
+
+  document.getElementById("done-btn").addEventListener("click", function(){
+    activityCompleted();
+  });
+
+  function resetActivity(){
+    // Screen 2
+    STATE.s2.built = [[], [], [], []];
+    STATE.s2.correct = [false, false, false, false];
+    STATE.s2.attempts = [0, 0, 0, 0];
+    STATE.s2.revealed = [false, false, false, false];
+    // Screen 3
+    STATE.s3.values = ["", "", "", ""];
+    STATE.s3.correct = [false, false, false, false];
+    STATE.s3.attempts = [0, 0, 0, 0];
+    STATE.s3.revealed = [false, false, false, false];
+    // Screen 4
+    STATE.s4.chosen = [null, null, null];
+    STATE.s4.correct = [false, false, false];
+    STATE.s4.attempts = [0, 0, 0];
+    STATE.s4.revealed = [false, false, false];
+    // Screen 5
+    STATE.s5 = {
+      a: { chosen: [null, null], correct: [false, false] },
+      b: { selectedQ: null, pairs: {}, correctFlags: [false, false, false] },
+      c: { chosen: null, correct: false },
+      attempts: 0,
+      revealed: false
+    };
+    STATE.validated = { s2: false, s3: false, s4: false, s5: false };
+    STATE.reachedScreen6 = false;
+
+    document.getElementById("s2-continue").disabled = true;
+    document.getElementById("s3-continue").disabled = true;
+    document.getElementById("s4-continue").disabled = true;
+    document.getElementById("s5-continue").disabled = true;
+    document.getElementById("s2-feedback").className = "screen-feedback";
+    document.getElementById("s3-feedback").className = "screen-feedback";
+    document.getElementById("s4-feedback").className = "screen-feedback";
+    document.getElementById("s5-feedback").className = "screen-feedback";
+    var oldShowMe = document.getElementById("s5-showme");
+    if (oldShowMe) oldShowMe.remove();
+
+    renderS2();
+    renderS3();
+    renderS4();
+    renderS5();
+
+    completionSent = false;
+    var doneBtn = document.getElementById("done-btn");
+    doneBtn.textContent = "Done";
+    doneBtn.disabled = true;
+
+    try { window.localStorage.removeItem(STORAGE_KEY + "_complete"); } catch (e) {}
+
+    showScreen(1);
+    announce("The activity has been reset. You are back at the start.");
+  }
+
+  document.getElementById("tryagain-btn").addEventListener("click", resetActivity);
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+  function init(){
+    initScorm();
+    renderS2();
+    renderS3();
+    renderS4();
+    renderS5();
+    document.getElementById("done-btn").disabled = true;
+
+    // Restoring progress never trusts stale saved "valid" booleans: the
+    // learner always restarts at Screen 1 and each screen must be
+    // rechecked against the current answer data before Continue unlocks.
+    loadProgress();
+    showScreen(1);
+
+    window.addEventListener("beforeunload", function(){
+      try {
+        if (scormAPI){
+          if (scormVersion === "2004") scormAPI.Terminate("");
+          else scormAPI.LMSFinish("");
+        }
+      } catch (e) {}
+    });
+  }
+
+  if (document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+</body>
+</html>
