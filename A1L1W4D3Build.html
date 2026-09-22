@@ -259,6 +259,7 @@
     background:#fff;
     color:var(--pazapa-grey-dark);
     border:1px solid var(--pazapa-grey-light);
+    padding:8px 12px;
   }
   .chunk.bank:hover{background:#f3fbfd;border-color:var(--pazapa-blue);}
   .bankwrap{
@@ -788,7 +789,7 @@ function goToScreen(n){
 /* ============ STATE ============ */
 var state = {
   screen2: { answers:{}, attempts:0, revealed:{} },
-  screen3: { answers:{}, attempts:0, revealed:{} },
+  screen3: { attempts:0, revealed:{} },
   screen4: { answers:{}, attempts:0, revealed:{} },
   screen5: { partA:null, partB:null, attemptsA:0, attemptsB:0, revealedA:false, revealedB:false,
              dir:"", place:"", rel:"", landmark:"" },
@@ -990,6 +991,7 @@ function renderBuildItemPieces(itemId){
 
 function addChunk(itemId, word){
   state.screen2.answers[itemId].push(word);
+  delete state.screen2.revealed[itemId];
   invalidateAfterEdit2();
   renderBuildItemPieces(itemId);
   announce(word + " added.");
@@ -997,6 +999,7 @@ function addChunk(itemId, word){
 function removeChunk(itemId, idx){
   var word = state.screen2.answers[itemId][idx];
   state.screen2.answers[itemId].splice(idx,1);
+  delete state.screen2.revealed[itemId];
   invalidateAfterEdit2();
   renderBuildItemPieces(itemId);
   announce(word + " removed.");
@@ -1007,6 +1010,7 @@ function moveChunk(itemId, from, to){
   var w = arr[from];
   arr.splice(from,1);
   arr.splice(to,0,w);
+  delete state.screen2.revealed[itemId];
   invalidateAfterEdit2();
   renderBuildItemPieces(itemId);
   var slot = $("slot-"+itemId);
@@ -1028,10 +1032,10 @@ $("s2check").addEventListener("click", function(){
   BUILD_ITEMS.forEach(function(item){
     var placed = state.screen2.answers[item.id];
     var st = $("status-"+item.id);
-    var correct = arraysEqual(placed, item.chunks) || state.screen2.revealed[item.id];
+    var correct = arraysEqual(placed, item.chunks);
     if(correct){
       st.className = "status correct";
-      st.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> Correct.';
+      st.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> ' + (state.screen2.revealed[item.id] ? "Shown for you." : "Correct.");
     } else {
       allGood = false;
       st.className = "status retry";
@@ -1112,6 +1116,7 @@ function renderGapItems(){
       input.className = "gapinput";
       status.className = "status";
       status.innerHTML = "";
+      delete state.screen3.revealed[g.id];
       updateWordBankAvailability();
     });
     input.addEventListener("focus", function(){ activeGapInput = input; });
@@ -1119,7 +1124,6 @@ function renderGapItems(){
 }
 
 var activeGapInput = null;
-var wordBankUsage = {}; // word -> boolean used
 
 function renderWordBank(){
   var wrap = $("wordbankWrap");
@@ -1165,11 +1169,11 @@ $("s3check").addEventListener("click", function(){
   GAP_ITEMS.forEach(function(g){
     var input = $("gap-"+g.id);
     var status = $("gapstatus-"+g.id);
-    var correct = normalize(input.value) === normalize(g.answer) || state.screen3.revealed[g.id];
+    var correct = normalize(input.value) === normalize(g.answer);
     if(correct){
       input.className = "gapinput correct";
       status.className = "status correct";
-      status.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> Correct.';
+      status.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> ' + (state.screen3.revealed[g.id] ? "Shown for you." : "Correct.");
     } else {
       allGood = false;
       input.className = "gapinput retry";
@@ -1243,6 +1247,7 @@ function renderSituations(){
       b.setAttribute("aria-pressed","false");
       b.addEventListener("click", function(){
         state.screen4.answers[sit.id] = optIdx;
+        delete state.screen4.revealed[sit.id];
         var siblings = list.querySelectorAll(".optionbtn");
         siblings.forEach(function(s){ s.setAttribute("aria-pressed","false"); s.classList.remove("correct","retry"); });
         b.setAttribute("aria-pressed","true");
@@ -1278,7 +1283,7 @@ $("s4check").addEventListener("click", function(){
     var status = $("sitstatus-"+sit.id);
     var list = $("opts-"+sit.id);
     var buttons = list.querySelectorAll(".optionbtn");
-    var isCorrect = (typeof chosen === "number" && sit.options[chosen] && sit.options[chosen].correct) || state.screen4.revealed[sit.id];
+    var isCorrect = (typeof chosen === "number" && sit.options[chosen] && sit.options[chosen].correct);
 
     buttons.forEach(function(btn, i){
       btn.classList.remove("correct","retry");
@@ -1286,7 +1291,7 @@ $("s4check").addEventListener("click", function(){
 
     if(isCorrect){
       status.className = "status correct";
-      status.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> Correct.';
+      status.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> ' + (state.screen4.revealed[sit.id] ? "Shown for you." : "Correct.");
       $("expl-"+sit.id).classList.add("show");
       // mark the chosen (or correct) button green
       var correctText = sit.options.filter(function(o){return o.correct;})[0].text;
@@ -1323,8 +1328,10 @@ $("s4help").addEventListener("click", function(){
     var chosen = state.screen4.answers[sit.id];
     var isCorrect = typeof chosen === "number" && sit.options[chosen] && sit.options[chosen].correct;
     if(!isCorrect){
+      var correctIdx = sit.options.map(function(o,i){return o.correct?i:-1;}).filter(function(i){return i>=0;})[0];
+      state.screen4.answers[sit.id] = correctIdx;
       state.screen4.revealed[sit.id] = true;
-      var correctText = sit.options.filter(function(o){return o.correct;})[0].text;
+      var correctText = sit.options[correctIdx].text;
       var list = $("opts-"+sit.id);
       var buttons = list.querySelectorAll(".optionbtn");
       buttons.forEach(function(btn){
@@ -1347,7 +1354,7 @@ $("s4help").addEventListener("click", function(){
 $("s4continue").addEventListener("click", function(){ goToScreen(5); });
 
 /* ============ SCREEN 5 ============ */
-function renderS5Options(containerId, options, stateKey, statusId){
+function renderS5Options(containerId, options, stateKey, statusId, revealedKey){
   var wrap = $(containerId);
   wrap.innerHTML = "";
   var order = shuffle(options.map(function(o,i){return i;}));
@@ -1360,6 +1367,7 @@ function renderS5Options(containerId, options, stateKey, statusId){
     b.setAttribute("aria-pressed","false");
     b.addEventListener("click", function(){
       state.screen5[stateKey] = optIdx;
+      state.screen5[revealedKey] = false;
       var siblings = wrap.querySelectorAll(".optionbtn");
       siblings.forEach(function(s){ s.setAttribute("aria-pressed","false"); s.classList.remove("correct","retry"); });
       b.setAttribute("aria-pressed","true");
@@ -1370,8 +1378,8 @@ function renderS5Options(containerId, options, stateKey, statusId){
     wrap.appendChild(b);
   });
 }
-renderS5Options("s5partA", S5_PART_A, "partA", "s5statusA");
-renderS5Options("s5partB", S5_PART_B, "partB", "s5statusB");
+renderS5Options("s5partA", S5_PART_A, "partA", "s5statusA", "revealedA");
+renderS5Options("s5partB", S5_PART_B, "partB", "s5statusB", "revealedB");
 
 ["s5dir","s5place","s5rel","s5landmark"].forEach(function(id){
   $(id).addEventListener("change", function(){
@@ -1387,8 +1395,8 @@ function s5PartComplete(){
 }
 
 $("s5check").addEventListener("click", function(){
-  var okA = (state.screen5.partA!==null && S5_PART_A[state.screen5.partA].correct) || state.screen5.revealedA;
-  var okB = (state.screen5.partB!==null && S5_PART_B[state.screen5.partB].correct) || state.screen5.revealedB;
+  var okA = (state.screen5.partA!==null && S5_PART_A[state.screen5.partA].correct);
+  var okB = (state.screen5.partB!==null && S5_PART_B[state.screen5.partB].correct);
   var okC = s5PartComplete();
 
   var stA = $("s5statusA");
@@ -1397,7 +1405,7 @@ $("s5check").addEventListener("click", function(){
     stA.innerHTML = '<span class="statusdot retry" aria-hidden="true"></span> Choose one sentence.';
   } else if(okA){
     stA.className = "status correct";
-    stA.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> Correct.';
+    stA.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> ' + (state.screen5.revealedA ? "Shown for you." : "Correct.");
   } else {
     state.screen5.attemptsA++;
     stA.className = "status retry";
@@ -1410,7 +1418,7 @@ $("s5check").addEventListener("click", function(){
     stB.innerHTML = '<span class="statusdot retry" aria-hidden="true"></span> Choose one sentence.';
   } else if(okB){
     stB.className = "status correct";
-    stB.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> Correct.';
+    stB.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> ' + (state.screen5.revealedB ? "Shown for you." : "Correct.");
   } else {
     state.screen5.attemptsB++;
     stB.className = "status retry";
@@ -1441,8 +1449,9 @@ $("s5check").addEventListener("click", function(){
 
 $("s5help").addEventListener("click", function(){
   if(!(state.screen5.partA!==null && S5_PART_A[state.screen5.partA].correct)){
-    state.screen5.revealedA = true;
     var correctIdxA = S5_PART_A.map(function(o,i){return o.correct?i:-1;}).filter(function(i){return i>=0;})[0];
+    state.screen5.partA = correctIdxA;
+    state.screen5.revealedA = true;
     var wrapA = $("s5partA");
     wrapA.querySelectorAll(".optionbtn").forEach(function(btn){
       var isCorrectBtn = btn.textContent === S5_PART_A[correctIdxA].text;
@@ -1454,8 +1463,9 @@ $("s5help").addEventListener("click", function(){
     stA.innerHTML = '<span class="statusdot correct" aria-hidden="true"></span> Shown for you.';
   }
   if(!(state.screen5.partB!==null && S5_PART_B[state.screen5.partB].correct)){
-    state.screen5.revealedB = true;
     var correctIdxB = S5_PART_B.map(function(o,i){return o.correct?i:-1;}).filter(function(i){return i>=0;})[0];
+    state.screen5.partB = correctIdxB;
+    state.screen5.revealedB = true;
     var wrapB = $("s5partB");
     wrapB.querySelectorAll(".optionbtn").forEach(function(btn){
       var isCorrectBtn = btn.textContent === S5_PART_B[correctIdxB].text;
@@ -1513,8 +1523,8 @@ function resetActivity(){
   renderGapItems();
   renderWordBank();
   renderSituations();
-  renderS5Options("s5partA", S5_PART_A, "partA", "s5statusA");
-  renderS5Options("s5partB", S5_PART_B, "partB", "s5statusB");
+  renderS5Options("s5partA", S5_PART_A, "partA", "s5statusA", "revealedA");
+  renderS5Options("s5partB", S5_PART_B, "partB", "s5statusB", "revealedB");
 
   ["s5dir","s5place","s5rel","s5landmark"].forEach(function(id){
     $(id).value = "";
@@ -1657,6 +1667,8 @@ function restoreProgress(){
   });
 
   if(data.screen4 && data.screen4.answers){ state.screen4.answers = data.screen4.answers; state.screen4.revealed = data.screen4.revealed||{}; state.screen4.attempts = data.screen4.attempts||0; }
+
+  if(data.screen3){ state.screen3.attempts = data.screen3.attempts||0; state.screen3.revealed = data.screen3.revealed||{}; }
 
   if(data.screen5){
     state.screen5.partA = data.screen5.partA!==undefined ? data.screen5.partA : null;
