@@ -709,7 +709,7 @@ table.appt tbody tr.evidence-highlight{ background:var(--yellow-20); outline:3px
   /* =========================================================================
      SCREEN 1 — prediction (non-scored)
      ========================================================================= */
-  (function screen1() {
+  function setupScreen1() {
     var options = shuffle([
       { text: "An appointment list", correct: true },
       { text: "A restaurant menu", correct: false },
@@ -717,25 +717,38 @@ table.appt tbody tr.evidence-highlight{ background:var(--yellow-20); outline:3px
     ]);
     var ul = document.getElementById("predictChoices");
     ul.innerHTML = "";
+    say("predictFeedback", "");
+    var cont0 = document.getElementById("toScreen2");
+    cont0.disabled = true;
+    cont0.setAttribute("aria-disabled", "true");
     options.forEach(function (opt) {
       var li = document.createElement("li");
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "choice";
+      btn.setAttribute("aria-pressed", "false");
       btn.textContent = opt.text;
       btn.addEventListener("click", function () {
+        btn.setAttribute("aria-pressed", "true");
         var all = ul.querySelectorAll("button");
-        for (var i = 0; i < all.length; i++) { all[i].disabled = true; }
-        btn.classList.add(opt.correct ? "correct" : "wrong");
+        for (var i = 0; i < all.length; i++) {
+          all[i].disabled = true;
+          var isCorrect = all[i].getAttribute("data-correct") === "1";
+          all[i].classList.add(isCorrect ? "correct" : "revealed");
+        }
+        /* Non-scored prediction: the learner's own pick is never marked
+           "wrong" — the correct option is simply shown alongside it. */
         say("predictFeedback", "This is an appointment list. It shows who is meeting the pharmacist today, and when.");
         var cont = document.getElementById("toScreen2");
         cont.disabled = false;
         cont.removeAttribute("aria-disabled");
       });
+      btn.setAttribute("data-correct", opt.correct ? "1" : "0");
       li.appendChild(btn);
       ul.appendChild(li);
     });
-  })();
+  }
+  setupScreen1();
 
   /* =========================================================================
      SCREEN 2 — the text, plus optional key word help
@@ -821,6 +834,7 @@ table.appt tbody tr.evidence-highlight{ background:var(--yellow-20); outline:3px
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "choice";
+      btn.setAttribute("aria-pressed", "false");
       btn.textContent = opt.text;
       btn.setAttribute("data-correct", opt.correct ? "1" : "0");
       li.appendChild(btn);
@@ -964,6 +978,7 @@ table.appt tbody tr.evidence-highlight{ background:var(--yellow-20); outline:3px
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "appt-tap-row";
+      btn.setAttribute("aria-pressed", "false");
       btn.setAttribute("data-idx", String(idx));
       btn.innerHTML = '<span class="rt">' + a.time + ' — ' + a.patient + '</span><br>' + a.reason;
       wrap.appendChild(btn);
@@ -1096,7 +1111,8 @@ table.appt tbody tr.evidence-highlight{ background:var(--yellow-20); outline:3px
           rows[r].classList.add("revealed");
           rows[r].disabled = true;
           var pairIdx = rows[r].getAttribute("data-pair");
-          rows[r].querySelector(".mvalue").textContent = Q4C_PAIRS[pairIdx].patient + " → " + Q4C_PAIRS[pairIdx].value;
+          rows[r].querySelector(".mvalue").textContent = Q4C_PAIRS[pairIdx].patient;
+          rows[r].querySelector(".mlabel").textContent = "Must bring: " + Q4C_PAIRS[pairIdx].value;
         }
         for (var c = 0; c < chips.length; c++) { chips[c].disabled = true; }
         q4c.matchedCount = Q4C_PAIRS.length;
@@ -1182,6 +1198,7 @@ table.appt tbody tr.evidence-highlight{ background:var(--yellow-20); outline:3px
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "decision-card";
+      btn.setAttribute("aria-pressed", "false");
       btn.setAttribute("data-correct", opt.correct ? "1" : "0");
       btn.innerHTML = '<span class="dt">' + a.time + ' — ' + a.patient + '</span><span class="dr">' + a.reason + '</span>';
       wrap.appendChild(btn);
@@ -1312,6 +1329,12 @@ table.appt tbody tr.evidence-highlight{ background:var(--yellow-20); outline:3px
   tryAgainBtn.addEventListener("click", function () {
     completionMsg.classList.remove("shown");
     completionMsg.textContent = "";
+
+    setupScreen1();
+
+    var helpPanel = document.getElementById("helpPanel");
+    helpPanel.hidden = true;
+    document.getElementById("toggleHelp").setAttribute("aria-expanded", "false");
 
     q3a = makeQState(); q3b = makeQState();
     setupScreen3();
