@@ -1027,6 +1027,39 @@ button[aria-disabled="true"]{
       .replace(/\s+/g, " ");
   }
 
+  /* Parses a clock-time answer in almost any everyday written form
+     ("8 pm", "8pm", "8:00 pm", "8.00pm", "20:00", "2000") into a 24-hour
+     {h, m} pair, so a typed answer is checked by what time it MEANS rather
+     than by matching one exact string. Returns null if it can't be read as
+     a time at all. */
+  function parseClockTime(raw) {
+    var t = normalise(raw).replace(/\./g, "").replace(/\s+/g, "");
+    if (!t) { return null; }
+
+    var m24 = t.match(/^(\d{1,2}):?(\d{2})$/);
+    if (m24) {
+      var h24only = parseInt(m24[1], 10);
+      var min24 = parseInt(m24[2], 10);
+      if (h24only >= 0 && h24only <= 23 && min24 >= 0 && min24 < 60) {
+        return { h: h24only, m: min24 };
+      }
+    }
+
+    var m12 = t.match(/^(\d{1,2}):?(\d{2})?(am|pm)$/);
+    if (m12) {
+      var h12 = parseInt(m12[1], 10);
+      var min12 = m12[2] ? parseInt(m12[2], 10) : 0;
+      var meridiem = m12[3];
+      if (h12 >= 1 && h12 <= 12 && min12 >= 0 && min12 < 60) {
+        var h24 = h12 % 12;
+        if (meridiem === "pm") { h24 += 12; }
+        return { h: h24, m: min12 };
+      }
+    }
+
+    return null;
+  }
+
   /* =========================================================================
      SCREEN 1 — prediction (non-scored). Any choice reveals the purpose.
      ========================================================================= */
@@ -1127,7 +1160,7 @@ button[aria-disabled="true"]{
     var state = {
       "4a": { chosen: null, correct: "sun", attempts: 0, ok: false, evidence: "row4-sunday" },
       "4b": { chosen: null, correct: "tuesday", attempts: 0, ok: false, evidence: "row4-tuesday" },
-      "4c": { typed: "", correct: ["8 pm", "8pm", "20:00", "8:00 pm", "8.00 pm"], attempts: 0, ok: false, evidence: "row4-wednesday" },
+      "4c": { typed: "", targetHour: 20, targetMin: 0, attempts: 0, ok: false, evidence: "row4-wednesday" },
       "4d": { chosen: null, correct: "sat", attempts: 0, ok: false, evidence: "row4-saturday" }
     };
 
@@ -1198,8 +1231,24 @@ button[aria-disabled="true"]{
       var st = state[key];
       var ok;
       if (key === "4c") {
-        var typedNorm = normalise(document.getElementById("ans4c").value);
-        ok = st.correct.some(function (c) { return normalise(c) === typedNorm; });
+        var parsed = parseClockTime(document.getElementById("ans4c").value);
+        ok = !!parsed && parsed.h === st.targetHour && parsed.m === st.targetMin;
+        if (!ok) {
+          /* Lenient fallback: accept a bare hour with no am/pm at all
+             ("8", "8:00") as meaning the target hour, since the learner
+             has already read "8 pm" in the text and typing just the
+             number is a reasonable everyday answer here. */
+          var bare = normalise(document.getElementById("ans4c").value).replace(/[^0-9:]/g, "");
+          var mbare = bare.match(/^(\d{1,2})(?::(\d{2}))?$/);
+          if (mbare) {
+            var hb = parseInt(mbare[1], 10);
+            var mb = mbare[2] ? parseInt(mbare[2], 10) : 0;
+            var target12 = st.targetHour % 12 === 0 ? 12 : st.targetHour % 12;
+            if (mb === st.targetMin && (hb === st.targetHour || hb === target12)) {
+              ok = true;
+            }
+          }
+        }
         var input = document.getElementById("ans4c");
         input.classList.remove("correct", "wrong");
         input.classList.add(ok ? "correct" : "wrong");
@@ -1273,7 +1322,7 @@ button[aria-disabled="true"]{
     document.getElementById("tryAgain4").addEventListener("click", function () {
       state["4a"] = { chosen: null, correct: "sun", attempts: 0, ok: false, evidence: "row4-sunday" };
       state["4b"] = { chosen: null, correct: "tuesday", attempts: 0, ok: false, evidence: "row4-tuesday" };
-      state["4c"] = { typed: "", correct: ["8 pm", "8pm", "20:00", "8:00 pm", "8.00 pm"], attempts: 0, ok: false, evidence: "row4-wednesday" };
+      state["4c"] = { typed: "", targetHour: 20, targetMin: 0, attempts: 0, ok: false, evidence: "row4-wednesday" };
       state["4d"] = { chosen: null, correct: "sat", attempts: 0, ok: false, evidence: "row4-saturday" };
 
       var allBtns = document.querySelectorAll('#screen4 .choice, #screen4 .mini-row');
