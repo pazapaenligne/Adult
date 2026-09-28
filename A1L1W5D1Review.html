@@ -155,7 +155,7 @@ ul.clean li{margin:.25rem 0}
     <fieldset class="task">
       <legend>1. Match each word to its picture</legend>
       <div class="pics" id="a-slots"></div>
-      <div class="bank" id="a-bank" aria-label="Words to match"></div>
+      <div class="bank" id="a-bank" role="group" aria-label="Words to match"></div>
     </fieldset>
     <p class="fb" id="a-fb" role="status"></p>
     <ul class="hints" id="a-hints" aria-live="polite"></ul>
@@ -166,7 +166,7 @@ ul.clean li{margin:.25rem 0}
     <fieldset class="task">
       <legend>2. Complete the shop questions</legend>
       <div id="b-lines"></div>
-      <div class="bank" id="b-bank" aria-label="Words to complete the questions"></div>
+      <div class="bank" id="b-bank" role="group" aria-label="Words to complete the questions"></div>
     </fieldset>
     <p class="fb" id="b-fb" role="status"></p>
     <ul class="hints" id="b-hints" aria-live="polite"></ul>
@@ -644,7 +644,7 @@ function activityCompleted() {
 /* ---------- optional local recording ---------- */
 var recorders = [];
 function Recorder(root) {
-  var stream = null, mr = null, chunks = [], url = null, recording = false;
+  var stream = null, mr = null, chunks = [], url = null, recording = false, pending = false, token = 0;
   var audio = new Audio();
   root.innerHTML = '';
   var note = document.createElement('p');
@@ -663,7 +663,7 @@ function Recorder(root) {
   var supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
   function say(m) { status.textContent = m; }
   function ui() {
-    bRec.disabled = !supported || recording;
+    bRec.disabled = !supported || recording || pending;
     bStop.disabled = !recording;
     bPlay.disabled = !url || recording;
     bAgain.disabled = recording || (!url);
@@ -702,9 +702,12 @@ function Recorder(root) {
     ui();
   }
   bRec.addEventListener('click', function () {
-    if (recording || !supported) { return; }
+    if (recording || pending || !supported) { return; }
+    pending = true; var mine = ++token;
     revoke(); ui();
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+      pending = false;
+      if (mine !== token) { try { s.getTracks().forEach(function (tr) { tr.stop(); }); } catch (e0) { /* ignore */ } return; }
       stream = s;
       try {
         chunks = []; mr = new MediaRecorder(s);
@@ -714,7 +717,7 @@ function Recorder(root) {
       mr.onerror = function () { recording = false; release(); revoke(); say('Recording stopped because of a problem. Type your answer instead.'); ui(); };
       try { mr.start(); } catch (e2) { release(); say('Recording did not start. Type your answer instead.'); ui(); return; }
       recording = true; say('Recording. Press Stop when you finish.'); ui(); bStop.focus();
-    }).catch(function (e) { say(errText(e)); ui(); });
+    }).catch(function (e) { pending = false; if (mine !== token) { return; } say(errText(e)); ui(); });
   });
   bStop.addEventListener('click', function () { if (mr && mr.state !== 'inactive') { try { mr.stop(); } catch (e) { /* ignore */ } } });
   bPlay.addEventListener('click', function () {
@@ -728,6 +731,7 @@ function Recorder(root) {
   ui();
   var api = {
     hardStop: function () {
+      token++; pending = false;
       if (mr) { mr.onstop = null; try { if (mr.state !== 'inactive') { mr.stop(); } } catch (e) { /* ignore */ } }
       recording = false; release(); chunks = []; revoke();
       if (supported) { say(''); } ui();
@@ -746,9 +750,6 @@ window.addEventListener('pagehide', function () {
 
 /* ---------- drag / choose-and-place matcher ---------- */
 function makeMatcher(cfg) {
-  var fresh = cfg.bank.cloneNode(false);
-  cfg.bank.parentNode.replaceChild(fresh, cfg.bank);
-  cfg.bank = fresh;
   var order = shuffle(cfg.chips.map(function (c) { return c.id; }));
   var selected = null, drag = null, suppress = false;
   function label(id) { return cfg.chips.filter(function (c) { return c.id === id; })[0].label; }
@@ -865,6 +866,7 @@ function buildRadios(container, name, options, checked, onPick) {
 var SCREENS = [1, 2, 3, 4, 5, 6, 7];
 function show(n) {
   stopAllRecording();
+  clearGhosts();
   state.screen = n;
   SCREENS.forEach(function (i) { $('#s' + i).hidden = (i !== n); });
   $('#progress').textContent = 'Part ' + n + ' of 7';
@@ -895,7 +897,7 @@ function buildS1() {
       setFb($('#s1-fb'), true, 'Yes. Today you practised buying everyday food, asking the price and paying.');
     } else {
       state.s1 = '';
-      setFb($('#s1-fb'), false, v === 'family' ? 'That is a good goal, but it is for another lesson. Look for food and shopping.' : 'That is a good goal, but it is for another lesson. Look for food and shopping.');
+      setFb($('#s1-fb'), false, 'That is a good goal, but it is for another lesson. Look for food and shopping.');
     }
     updateS1(); persist();
   });
@@ -915,8 +917,8 @@ var CUES = {
   c: ['You cannot see the eggs. What do you need to know?', 'You want a place. Which question starts with Where?', 'The answer starts with: Where can I\u2026']
 };
 var A_INFO = {
-  bread: ['Picture 1: a loaf', 'a loaf of bread'], milk: ['Picture 2: a white drink', 'a bottle of milk'],
-  vegetables: ['Picture 3: carrots and tomatoes', 'carrots, lettuce, tomato and cucumber'], chicken: ['Picture 4: meat for dinner', 'a tray of chicken']
+  bread: ['a loaf', 'a loaf of bread'], milk: ['a white drink', 'a bottle of milk'],
+  vegetables: ['carrots and tomatoes', 'carrots, lettuce, tomato and cucumber'], chicken: ['meat for dinner', 'a tray of chicken']
 };
 var A_WHY = { bread: 'Bread is a loaf.', milk: 'Milk is a white drink.', vegetables: 'Carrots and tomatoes are vegetables.', chicken: 'Chicken is meat that we cook for dinner.' };
 var B_WHY = {
@@ -925,14 +927,16 @@ var B_WHY = {
   much: 'How much is the bread? asks the price.',
   like: 'I\u2019d like\u2026 is a polite way to ask for something.'
 };
+function clearGhosts() { $$('.chip.ghost').forEach(function (g) { if (g.parentNode) { g.parentNode.removeChild(g); } }); }
 function buildS2() {
+  clearGhosts();
   /* task A */
   var aSlots = $('#a-slots'); aSlots.textContent = '';
   var slotsA = {};
-  var names = ['bread', 'milk', 'vegetables', 'chicken'];
+  var names = shuffle(['bread', 'milk', 'vegetables', 'chicken']);
   names.forEach(function (w, i) {
     var b = document.createElement('button'); b.type = 'button'; b.className = 'slot pic';
-    b.dataset.slot = 'A_' + w; b.dataset.name = A_INFO[w][0]; b.dataset.empty = 'Drop word here';
+    b.dataset.slot = 'A_' + w; b.dataset.name = 'Picture ' + (i + 1) + ': ' + A_INFO[w][0]; b.dataset.empty = 'Drop word here';
     var img = document.createElement('img'); img.src = IMAGES[w]; img.alt = A_INFO[w][1];
     var fill = document.createElement('span'); fill.className = 'slot-fill';
     b.appendChild(img); b.appendChild(fill); aSlots.appendChild(b); slotsA['A_' + w] = b;
@@ -1117,7 +1121,6 @@ function updateS5() {
   if (!(secondDistinct() || state.sp)) { need.push('write a second try that is different from your first try (at least three words), or say it aloud and tick the box'); }
   if (!state.ic) { need.push('tick the box to say you used your improvement'); }
   $('#s5-need').textContent = ok ? '' : 'To continue: ' + need.join('; and ') + '.';
-  var det = improvedList(state.first, state.second);
   var fbn = $('#s5-fb');
   if (secondDistinct() && state.ic) {
     setFb(fbn, true, 'Your second try is saved next to your first try. You can keep changing it.');
